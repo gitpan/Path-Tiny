@@ -2,7 +2,7 @@ NAME
     Path::Tiny - File path utility
 
 VERSION
-    version 0.002
+    version 0.003
 
 SYNOPSIS
       use Path::Tiny;
@@ -351,8 +351,8 @@ BENCHMARKING
 SUPPORT
   Bugs / Feature Requests
     Please report any bugs or feature requests through the issue tracker at
-    <https://rt.cpan.org/Public/Dist/Display.html?Name=Path-Tiny>. You will
-    be notified automatically of any progress on your issue.
+    <https://github.com/dagolden/path-tiny/issues>. You will be notified
+    automatically of any progress on your issue.
 
   Source Code
     This is open source software. The code repository is available for

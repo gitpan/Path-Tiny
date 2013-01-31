@@ -15,6 +15,7 @@ t/children.t
 t/filesystem.t
 t/input_output.t
 t/mkpath.t
+t/normalize.t
 t/overloading.t
 t/parent.t
 t/rel-abs.t

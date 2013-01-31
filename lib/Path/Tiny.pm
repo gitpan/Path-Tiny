@@ -4,7 +4,7 @@ use warnings;
 
 package Path::Tiny;
 # ABSTRACT: File path utility
-our $VERSION = '0.002'; # VERSION
+our $VERSION = '0.003'; # VERSION
 
 # Dependencies
 use autodie 2.00;
@@ -33,6 +33,10 @@ use overload (
     fallback => 1,
 );
 
+my $TID = 0; # for thread safe atomic writes
+
+sub CLONE { $TID = threads->tid }; # if cloning, threads should be loaded
+
 #--------------------------------------------------------------------------#
 # Constructors
 #--------------------------------------------------------------------------#
@@ -42,10 +46,10 @@ sub path {
     my $path = shift // ".";
     $path = "." unless length $path;
     # join stringifies any objects, too, which is handy :-)
-    $path = join( "/", ($path eq '/' ? "" : $path), @_ ) if @_;
+    $path = join( "/", ( $path eq '/' ? "" : $path ), @_ ) if @_;
     $path = File::Spec->canonpath($path); # ugh, but probably worth it
-    $path =~ tr[\\][/]; # unix convention enforced
-    $path =~ s{/$}{} if $path ne "/"; # hack to make splitpath give us a basename
+    $path =~ tr[\\][/];                   # unix convention enforced
+    $path =~ s{/$}{} if $path ne "/";     # hack to make splitpath give us a basename
     bless [$path], __PACKAGE__;
 }
 
@@ -116,7 +120,7 @@ sub basename {
 sub child {
     my ( $self, @parts ) = @_;
     my $path = $self->[PATH];
-    return path( join( "/", ($path eq '/' ? "" : $path), @parts) );
+    return path( join( "/", ( $path eq '/' ? "" : $path ), @parts ) );
 }
 
 
@@ -205,7 +209,7 @@ sub lines_utf8 {
 }
 
 
-sub lstat { File::stat::stat( $_[0]->[PATH] ) }
+sub lstat { File::stat::lstat( $_[0]->[PATH] ) }
 
 
 sub mkpath {
@@ -291,7 +295,7 @@ sub slurp_utf8 { push @_, { binmode => ":encoding(UTF-8)" }; goto &slurp }
 sub spew {
     my ( $self, @data ) = @_;
     my $args = ( @data && ref $data[0] eq 'HASH' ) ? shift @data : {};
-    my $temp = path( $self->[PATH] . $$ );
+    my $temp = path( $self->[PATH] . $TID . $$ );
     my $fh   = $temp->openw( $args->{binmode} );
     print {$fh} $_ for @data;
     close $fh;
@@ -342,7 +346,7 @@ Path::Tiny - File path utility
 
 =head1 VERSION
 
-version 0.002
+version 0.003
 
 =head1 SYNOPSIS
 
@@ -746,7 +750,7 @@ a file's basename.
 =head2 Bugs / Feature Requests
 
 Please report any bugs or feature requests through the issue tracker
-at L<https://rt.cpan.org/Public/Dist/Display.html?Name=Path-Tiny>.
+at L<https://github.com/dagolden/path-tiny/issues>.
 You will be notified automatically of any progress on your issue.
 
 =head2 Source Code

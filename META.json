@@ -70,14 +70,13 @@
    "provides" : {
       "Path::Tiny" : {
          "file" : "lib/Path/Tiny.pm",
-         "version" : "0.002"
+         "version" : "0.003"
       }
    },
    "release_status" : "stable",
    "resources" : {
       "bugtracker" : {
-         "mailto" : "bug-Path-Tiny@rt.cpan.org",
-         "web" : "https://rt.cpan.org/Public/Dist/Display.html?Name=Path-Tiny"
+         "web" : "https://github.com/dagolden/path-tiny/issues"
       },
       "homepage" : "https://metacpan.org/release/Path-Tiny",
       "repository" : {
@@ -86,6 +85,6 @@
          "web" : "https://github.com/dagolden/path-tiny"
       }
    },
-   "version" : "0.002"
+   "version" : "0.003"
 }
 
