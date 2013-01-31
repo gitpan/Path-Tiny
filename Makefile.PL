@@ -14,6 +14,7 @@ my %WriteMakefileArgs = (
   "BUILD_REQUIRES" => {
     "File::Find" => 0,
     "File::Spec::Unix" => 0,
+    "Path::Class" => 0,
     "Test::Deep" => 0,
     "Test::Fatal" => 0,
     "Test::More" => "0.96"
@@ -32,15 +33,15 @@ my %WriteMakefileArgs = (
     "File::Copy" => 0,
     "File::Path" => "2.07",
     "File::Spec" => "3.40",
-    "File::Stat" => 0,
     "File::Temp" => "0.18",
+    "File::stat" => 0,
     "autodie" => "2.00",
     "constant" => 0,
     "overload" => 0,
     "strict" => 0,
     "warnings" => 0
   },
-  "VERSION" => "0.001",
+  "VERSION" => "0.002",
   "test" => {
     "TESTS" => "t/*.t"
   }

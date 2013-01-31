@@ -4,7 +4,7 @@ use warnings;
 
 package Path::Tiny;
 # ABSTRACT: File path utility
-our $VERSION = '0.001'; # VERSION
+our $VERSION = '0.002'; # VERSION
 
 # Dependencies
 use autodie 2.00;
@@ -12,7 +12,7 @@ use Cwd        ();
 use Exporter   (qw/import/);
 use Fcntl      (qw/:flock SEEK_END/);
 use File::Copy ();
-use File::Stat ();
+use File::stat ();
 use File::Path 2.07 ();
 use File::Spec 3.40 ();
 use File::Temp 0.18 ();
@@ -342,7 +342,7 @@ Path::Tiny - File path utility
 
 =head1 VERSION
 
-version 0.001
+version 0.002
 
 =head1 SYNOPSIS
 

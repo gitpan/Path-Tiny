@@ -16,6 +16,7 @@ t/filesystem.t
 t/input_output.t
 t/mkpath.t
 t/overloading.t
+t/parent.t
 t/rel-abs.t
 t/temp.t
 t/zzz-spec.t

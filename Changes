@@ -1,6 +1,12 @@
 Revision history for Path-Tiny
 
+0.002     2013-01-30 22:09:37 America/New_York
+
+    [FIXED]
+
+    - s/File::Stat/File::stat/; # OMG! I hate case insensitivity
+
 0.001     2013-01-30 19:36:22 America/New_York
 
-  - First release
+    - First release
 
