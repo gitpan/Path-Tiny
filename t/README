@@ -2,7 +2,7 @@ NAME
     Path::Tiny - File path utility
 
 VERSION
-    version 0.003
+    version 0.004
 
 SYNOPSIS
       use Path::Tiny;
@@ -14,6 +14,11 @@ SYNOPSIS
 
       $subdir = $dir->child("foo");
       $bar = $subdir->child("bar.txt");
+
+      # stringifies as cleaned up path
+
+      $file = path("./foo.txt");
+      print $file; # "foo.txt"
 
       # reading files
 
@@ -50,6 +55,9 @@ DESCRIPTION
 
     All paths are forced to have Unix-style forward slashes. Stringifying
     the object gives you back the path (after some clean up).
+
+    File input/output methods "flock" handles before reading or writing, as
+    appropriate.
 
 CONSTRUCTORS
   path
@@ -99,6 +107,11 @@ METHODS
     argument is given, the current directory is used as the absolute base
     path. The argument must be absolute or you won't get an absolute result.
 
+    This will not resolve upward directories ("foo/../bar") unless
+    "canonpath" in File::Spec would normally do so on your platform. If you
+    need them resolved, you must call the more expensive "realpath" method
+    instead.
+
   append
         path("foo.txt")->append(@data);
         path("foo.txt")->append({binmode => ":raw"}, @data);
@@ -107,6 +120,12 @@ METHODS
     writing. An optional hash reference may be used to pass options. The
     only option is "binmode", which is passed to "binmode()" on the handle
     used for writing.
+
+  append_raw
+        path("foo.txt")->append_raw(@data);
+
+    This is like "append" with a "binmode" of ":unix" for fast, unbuffered,
+    raw write.
 
   append_utf8
         path("foo.txt")->append_utf8(@data);
@@ -117,6 +136,13 @@ METHODS
         $name = path("foo/bar.txt")->basename; # bar.txt
 
     Returns the file portion or last directory portion of a path.
+
+  canonpath
+        $canonical = path("foo/bar")->canonpath; # foo\bar on Windows
+
+    Returns a string with the canonical format of the path name for the
+    platform. In particular, this means directory separators will be "\" on
+    Windows.
 
   child
         $file = path("/tmp")->child("foo.txt"); # "/tmp/foo.txt"
@@ -203,9 +229,19 @@ METHODS
     "count" is provided, up to that many lines will be returned. If "chomp"
     is set, lines will be chomped before being returned.
 
+    Because the return is a list, "lines" in scalar context will return the
+    number of lines (and throw away the data).
+
+        $number_of_lines = path("/tmp/foo.txt")->lines;
+
+  lines_raw
+        @contents = path("/tmp/foo.txt")->lines_raw;
+
+    This is like "lines" with a "binmode" of ":raw". We use ":raw" instead
+    of ":unix" so PerlIO buffering can manage reading by line.
+
   lines_utf8
         @contents = path("/tmp/foo.txt")->lines_utf8;
-        @contents = path("/tmp/foo.txt")->lines({chomp => 1});
 
     This is like "lines" with a "binmode" of ":encoding(UTF-8)".
 
@@ -228,20 +264,25 @@ METHODS
 
   openr, openw, openrw, opena
         $fh = path("foo.txt")->openr($binmode);  # read
+        $fh = path("foo.txt")->openr_raw;
         $fh = path("foo.txt")->openr_utf8;
 
         $fh = path("foo.txt")->openw($binmode);  # write
+        $fh = path("foo.txt")->openw_raw;
         $fh = path("foo.txt")->openw_utf8;
 
         $fh = path("foo.txt")->opena($binmode);  # append
+        $fh = path("foo.txt")->opena_raw;
         $fh = path("foo.txt")->opena_utf8;
 
         $fh = path("foo.txt")->openrw($binmode); # read/write
+        $fh = path("foo.txt")->openrw_raw;
         $fh = path("foo.txt")->openrw_utf8;
 
     Returns a file handle opened in the specified mode. The "openr" style
     methods take a single "binmode" argument. All of the "open*" methods
-    have "open*_utf8" equivalents that use ":encoding(UTF-8)".
+    have "open*_raw" and "open*_utf8" equivalents that use ":raw" and
+    ":encoding(UTF-8)", respectively.
 
   parent
         $parent = path("foo/bar/baz")->parent; # foo/bar
@@ -249,6 +290,14 @@ METHODS
 
     Returns a "Path::Tiny" object corresponding to the parent directory of
     the original directory or file.
+
+  realpath
+        $real = path("/baz/foo/../bar")->realpath;
+        $real = path("foo/../bar")->realpath;
+
+    Returns a new "Path::Tiny" object with all symbolic links and upward
+    directory parts resolved using Cwd's "realpath". Compared to "absolute",
+    this is more expensive as it must actually consult the filesystem.
 
   relative
         $rel = path("/tmp/foo/bar")->relative("/tmp"); # foo/bar
@@ -280,6 +329,12 @@ METHODS
     be used to pass options. The only option is "binmode", which is passed
     to "binmode()" on the handle used for reading.
 
+  slurp_raw
+        $data = path("foo.txt")->slurp_raw;
+
+    This is like "slurp" with a "binmode" of ":unix" for a fast, unbuffered,
+    raw read.
+
   slurp_utf8
         $data = path("foo.txt")->slurp_utf8;
 
@@ -295,6 +350,12 @@ METHODS
     "binmode", which is passed to "binmode()" on the handle used for
     writing.
 
+  spew_raw
+        path("foo.txt")->spew_raw(@data);
+
+    This is like "spew" with a "binmode" of ":unix" for a fast, unbuffered,
+    raw write.
+
   spew_utf8
         path("foo.txt")->spew_utf8(@data);
 
@@ -309,7 +370,9 @@ METHODS
         $path = path("foo.txt");
         say $path->stringify; # same as "$path"
 
-    Returns a string representation of the path.
+    Returns a string representation of the path. Unlike "canonpath", this
+    method returns the path standardized with Unix-style "/" directory
+    separators.
 
   touch
         path("foo.txt")->touch;
@@ -323,6 +386,20 @@ METHODS
     Returns the volume portion of the path. This is equivalent equivalent to
     what File::Spec would give from "splitpath" and thus usually is the
     empty string on Unix-like operating systems.
+
+CAVEATS
+  utf8 vs UTF-8
+    All the *_utf8 methods use "encoding(UTF-8)", which is the stricter
+    mode. However, this can be significantly slower than ":utf8". If you
+    need performance and can accept the security risk, "slurp({binmode ="
+    ":utf8"}) might be faster.
+
+    Another option might be to read using ":raw" and then pass the result to
+    "Encode::decode" yourself.
+
+TYPE CONSTRAINTS AND COERCION
+    A standard MooseX::Types library is available at
+    MooseX::Types::Path::Tiny.
 
 SEE ALSO
     *   File::Fu

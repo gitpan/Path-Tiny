@@ -5,7 +5,6 @@ author:
 build_requires:
   File::Find: 0
   File::Spec::Unix: 0
-  Path::Class: 0
   Test::Deep: 0
   Test::Fatal: 0
   Test::More: 0.96
@@ -29,7 +28,7 @@ no_index:
 provides:
   Path::Tiny:
     file: lib/Path/Tiny.pm
-    version: 0.003
+    version: 0.004
 requires:
   Cwd: 0
   Exporter: 0
@@ -49,4 +48,4 @@ resources:
   bugtracker: https://github.com/dagolden/path-tiny/issues
   homepage: https://metacpan.org/release/Path-Tiny
   repository: git://github.com/dagolden/path-tiny.git
-version: 0.003
+version: 0.004

@@ -11,6 +11,7 @@ all_pod_files_spelling_ok('bin', 'lib');
 __DATA__
 BENCHMARKING
 Stringifying
+canonpath
 dirname
 lstat
 mkpath
@@ -18,8 +19,10 @@ openr
 openw
 opena
 openrw
+realpath
 subclasses
 unlinked
+utf
 David
 Golden
 lib

@@ -4,7 +4,7 @@ use warnings;
 
 package Path::Tiny;
 # ABSTRACT: File path utility
-our $VERSION = '0.003'; # VERSION
+our $VERSION = '0.004'; # VERSION
 
 # Dependencies
 use autodie 2.00;
@@ -20,11 +20,12 @@ use File::Temp 0.18 ();
 our @EXPORT = qw/path/;
 
 use constant {
-    PATH => 0,
-    VOL  => 1,
-    DIR  => 2,
-    FILE => 3,
-    TEMP => 4,
+    PATH  => 0,
+    CANON => 1,
+    VOL   => 2,
+    DIR   => 3,
+    FILE  => 4,
+    TEMP  => 5,
 };
 
 use overload (
@@ -47,10 +48,10 @@ sub path {
     $path = "." unless length $path;
     # join stringifies any objects, too, which is handy :-)
     $path = join( "/", ( $path eq '/' ? "" : $path ), @_ ) if @_;
-    $path = File::Spec->canonpath($path); # ugh, but probably worth it
+    my $cpath = $path = File::Spec->canonpath($path); # ugh, but probably worth it
     $path =~ tr[\\][/];                   # unix convention enforced
     $path =~ s{/$}{} if $path ne "/";     # hack to make splitpath give us a basename
-    bless [$path], __PACKAGE__;
+    bless [$path, $cpath], __PACKAGE__;
 }
 
 
@@ -98,13 +99,16 @@ sub absolute {
 sub append {
     my ( $self, @data ) = @_;
     my $args = ( @data && ref $data[0] eq 'HASH' ) ? shift @data : {};
-    my $fh = $self->opena( $args->{binmode} );
+    my $fh = $self->filehandle( ">>", $args->{binmode} );
     flock( $fh, LOCK_EX );
-    seek( $fh, 0, SEEK_END );
+    seek( $fh, 0, SEEK_END ); # ensure SEEK_END after flock
     print {$fh} $_ for @data;
     flock( $fh, LOCK_UN );
-    close $fh;
+    close $fh;                # force immediate flush
 }
+
+
+sub append_raw { splice @_, 1, 0, { binmode => ":unix" }; goto &append }
 
 
 sub append_utf8 { splice @_, 1, 0, { binmode => ":encoding(UTF-8)" }; goto &append }
@@ -115,6 +119,9 @@ sub basename {
     $self->_splitpath unless defined $self->[FILE];
     return $self->[FILE];
 }
+
+
+sub canonpath { $_[0]->[CANON] }
 
 
 sub child {
@@ -128,7 +135,8 @@ sub child {
 sub children {
     my ($self) = @_;
     opendir my $dh, $self->[PATH];
-    return map { $self->child($_) } grep { $_ ne '.' && $_ ne '..' } readdir $dh;
+    return
+      map { path( $self->[PATH] . "/$_" ) } grep { $_ ne '.' && $_ ne '..' } readdir $dh;
 }
 
 
@@ -148,15 +156,9 @@ sub exists { -e $_[0]->[PATH] }
 
 sub filehandle {
     my ( $self, $mode, $binmode ) = @_;
-    my $fh;
-    if ( 0 && defined $self->[TEMP] ) {
-        $fh = $self->[TEMP];
-    }
-    else {
-        $mode //= "<";
-        open $fh, $mode, $self->[PATH];
-    }
-    binmode( $fh, $binmode ) if $binmode;
+    $mode    //= "<";
+    $binmode //= "";
+    open my $fh, "$mode$binmode", $self->[PATH];
     return $fh;
 }
 
@@ -191,14 +193,26 @@ sub iterator {
 sub lines {
     my ( $self, $args ) = @_;
     $args = {} unless ref $args eq 'HASH';
-    my $fh    = $self->openr( $args->{binmode} );
+    my $fh = $self->filehandle( "<", $args->{binmode} );
+    flock( $fh, LOCK_SH );
     my $chomp = $args->{chomp};
+    my @lines;
     if ( $args->{count} ) {
-        return map { chomp if $chomp; $_ } map { scalar <$fh> } 1 .. $args->{count};
+        @lines = map { chomp if $chomp; $_ } map { scalar <$fh> } 1 .. $args->{count};
     }
     else {
-        return map { chomp if $chomp; $_ } <$fh>;
+        @lines = $chomp ? ( map { chomp if $chomp; $_ } <$fh> ) : <$fh>;
     }
+    flock( $fh, LOCK_UN );
+    close $fh;
+    return @lines;
+}
+
+
+sub lines_raw {
+    $_[1] = {} unless ref $_[1] eq 'HASH';
+    $_[1]->{binmode} = ":raw";
+    goto &lines;
 }
 
 
@@ -213,8 +227,7 @@ sub lstat { File::stat::lstat( $_[0]->[PATH] ) }
 
 
 sub mkpath {
-    my ( $self, $opts ) = @_;
-    return File::Path::make_path( $self->[PATH], ref($opts) eq 'HASH' ? $opts : () );
+    File::Path::make_path( $_[0]->[PATH], ref $_[1] eq 'HASH' ? $_[1] : () );
 }
 
 
@@ -230,11 +243,14 @@ my %opens = (
 
 while ( my ( $k, $v ) = each %opens ) {
     no strict 'refs';
-    *{$k} = sub { $_[0]->filehandle( $v, $_[1] ) };
+    *{$k}             = sub { $_[0]->filehandle( $v, $_[1] ) };
+    *{ $k . "_raw" }  = sub { $_[0]->filehandle( $v, ":raw" ) };
     *{ $k . "_utf8" } = sub { $_[0]->filehandle( $v, ":encoding(UTF-8)" ) };
 }
 
 
+# XXX this is ugly and coverage is incomplete.  I think it's there for windows
+# so need to check coverage there and compare
 sub parent {
     my ($self) = @_;
     $self->_splitpath unless defined $self->[FILE];
@@ -262,11 +278,11 @@ sub parent {
 }
 
 
+sub realpath { return path( Cwd::realpath( $_[0]->[PATH] ) ) }
+
+
 # Easy to get wrong, so wash it through File::Spec (sigh)
-sub relative {
-    my ( $self, $base ) = @_;
-    return path( File::Spec->abs2rel( $self->[PATH], $base ) );
-}
+sub relative { path( File::Spec->abs2rel( $_[0]->[PATH], $_[1] ) ) }
 
 
 sub remove {
@@ -283,24 +299,43 @@ sub remove {
 sub slurp {
     my ( $self, $args ) = @_;
     $args = {} unless ref $args eq 'HASH';
-    my $fh = $self->openr( $args->{binmode} );
-    local $/;
-    return scalar <$fh>;
+    my $fh = $self->filehandle( "<", $args->{binmode} );
+    flock( $fh, LOCK_SH );
+    my $buf;
+    if ( ( $args->{binmode} // "" ) eq ":unix" and my $size = -s $fh ) {
+        read $fh, $buf, $size; # File::Slurp in a nutshell
+    }
+    else {
+        $buf = do { local $/; <$fh> };
+    }
+    flock( $fh, LOCK_UN );
+    close $fh;
+    return $buf;
 }
 
 
-sub slurp_utf8 { push @_, { binmode => ":encoding(UTF-8)" }; goto &slurp }
+sub slurp_raw { $_[1] = { binmode => ":unix" }; goto &slurp }
+
+
+sub slurp_utf8 { $_[1] = { binmode => ":encoding(UTF-8)" }; goto &slurp }
 
 
 sub spew {
     my ( $self, @data ) = @_;
     my $args = ( @data && ref $data[0] eq 'HASH' ) ? shift @data : {};
     my $temp = path( $self->[PATH] . $TID . $$ );
-    my $fh   = $temp->openw( $args->{binmode} );
+    my $fh   = $temp->filehandle( ">", $args->{binmode} );
+    flock( $fh, LOCK_EX );
+    seek( $fh, 0, 0 );
+    truncate( $fh, 0 );
     print {$fh} $_ for @data;
+    flock( $fh, LOCK_UN );
     close $fh;
     $temp->move( $self->[PATH] );
 }
+
+
+sub spew_raw { splice @_, 1, 0, { binmode => ":unix" }; goto &spew }
 
 
 sub spew_utf8 { splice @_, 1, 0, { binmode => ":encoding(UTF-8)" }; goto &spew }
@@ -346,7 +381,7 @@ Path::Tiny - File path utility
 
 =head1 VERSION
 
-version 0.003
+version 0.004
 
 =head1 SYNOPSIS
 
@@ -359,6 +394,11 @@ version 0.003
 
   $subdir = $dir->child("foo");
   $bar = $subdir->child("bar.txt");
+
+  # stringifies as cleaned up path
+
+  $file = path("./foo.txt");
+  print $file; # "foo.txt"
 
   # reading files
 
@@ -396,6 +436,9 @@ And how does it differ on Win32?)
 
 All paths are forced to have Unix-style forward slashes.  Stringifying
 the object gives you back the path (after some clean up).
+
+File input/output methods C<flock> handles before reading or writing,
+as appropriate.
 
 =head1 CONSTRUCTORS
 
@@ -452,6 +495,10 @@ Returns a new C<Path::Tiny> object with an absolute path.  Unless
 an argument is given, the current directory is used as the absolute base path.
 The argument must be absolute or you won't get an absolute result.
 
+This will not resolve upward directories ("foo/../bar") unless C<canonpath>
+in L<File::Spec> would normally do so on your platform.  If you need them
+resolved, you must call the more expensive C<realpath> method instead.
+
 =head2 append
 
     path("foo.txt")->append(@data);
@@ -460,6 +507,12 @@ The argument must be absolute or you won't get an absolute result.
 Appends data to a file.  The file is locked with C<flock> prior to writing.  An
 optional hash reference may be used to pass options.  The only option is
 C<binmode>, which is passed to C<binmode()> on the handle used for writing.
+
+=head2 append_raw
+
+    path("foo.txt")->append_raw(@data);
+
+This is like C<append> with a C<binmode> of C<:unix> for fast, unbuffered, raw write.
 
 =head2 append_utf8
 
@@ -472,6 +525,14 @@ This is like C<append> with a C<binmode> of C<:encoding(UTF-8)>.
     $name = path("foo/bar.txt")->basename; # bar.txt
 
 Returns the file portion or last directory portion of a path.
+
+=head2 canonpath
+
+    $canonical = path("foo/bar")->canonpath; # foo\bar on Windows
+
+Returns a string with the canonical format of the path name for
+the platform.  In particular, this means directory separators
+will be C<\> on Windows.
 
 =head2 child
 
@@ -570,10 +631,21 @@ is provided, it will be set on the handle prior to reading.  If C<count> is
 provided, up to that many lines will be returned. If C<chomp> is set, lines
 will be chomped before being returned.
 
+Because the return is a list, C<lines> in scalar context will return the number
+of lines (and throw away the data).
+
+    $number_of_lines = path("/tmp/foo.txt")->lines;
+
+=head2 lines_raw
+
+    @contents = path("/tmp/foo.txt")->lines_raw;
+
+This is like C<lines> with a C<binmode> of C<:raw>.  We use C<:raw> instead
+of C<:unix> so PerlIO buffering can manage reading by line.
+
 =head2 lines_utf8
 
     @contents = path("/tmp/foo.txt")->lines_utf8;
-    @contents = path("/tmp/foo.txt")->lines({chomp => 1});
 
 This is like C<lines> with a C<binmode> of C<:encoding(UTF-8)>.
 
@@ -600,20 +672,25 @@ Just like C<rename>.
 =head2 openr, openw, openrw, opena
 
     $fh = path("foo.txt")->openr($binmode);  # read
+    $fh = path("foo.txt")->openr_raw;
     $fh = path("foo.txt")->openr_utf8;
 
     $fh = path("foo.txt")->openw($binmode);  # write
+    $fh = path("foo.txt")->openw_raw;
     $fh = path("foo.txt")->openw_utf8;
 
     $fh = path("foo.txt")->opena($binmode);  # append
+    $fh = path("foo.txt")->opena_raw;
     $fh = path("foo.txt")->opena_utf8;
 
     $fh = path("foo.txt")->openrw($binmode); # read/write
+    $fh = path("foo.txt")->openrw_raw;
     $fh = path("foo.txt")->openrw_utf8;
 
-Returns a file handle opened in the specified mode.  The C<openr> style
-methods take a single C<binmode> argument.  All of the C<open*> methods have
-C<open*_utf8> equivalents that use C<:encoding(UTF-8)>.
+Returns a file handle opened in the specified mode.  The C<openr> style methods
+take a single C<binmode> argument.  All of the C<open*> methods have
+C<open*_raw> and C<open*_utf8> equivalents that use C<:raw> and
+C<:encoding(UTF-8)>, respectively.
 
 =head2 parent
 
@@ -622,6 +699,15 @@ C<open*_utf8> equivalents that use C<:encoding(UTF-8)>.
 
 Returns a C<Path::Tiny> object corresponding to the parent
 directory of the original directory or file.
+
+=head2 realpath
+
+    $real = path("/baz/foo/../bar")->realpath;
+    $real = path("foo/../bar")->realpath;
+
+Returns a new C<Path::Tiny> object with all symbolic links and upward directory
+parts resolved using L<Cwd>'s C<realpath>.  Compared to C<absolute>, this is
+more expensive as it must actually consult the filesystem.
 
 =head2 relative
 
@@ -655,6 +741,13 @@ Reads file contents into a scalar.  Takes an optional hash reference may be
 used to pass options.  The only option is C<binmode>, which is passed to
 C<binmode()> on the handle used for reading.
 
+=head2 slurp_raw
+
+    $data = path("foo.txt")->slurp_raw;
+
+This is like C<slurp> with a C<binmode> of C<:unix> for
+a fast, unbuffered, raw read.
+
 =head2 slurp_utf8
 
     $data = path("foo.txt")->slurp_utf8;
@@ -670,6 +763,12 @@ Writes data to a file atomically.  The file is written to a temporary file in
 the same directory, then renamed over the original.  An optional hash reference
 may be used to pass options.  The only option is C<binmode>, which is passed to
 C<binmode()> on the handle used for writing.
+
+=head2 spew_raw
+
+    path("foo.txt")->spew_raw(@data);
+
+This is like C<spew> with a C<binmode> of C<:unix> for a fast, unbuffered, raw write.
 
 =head2 spew_utf8
 
@@ -688,7 +787,8 @@ Like calling C<stat> from L<File::stat>.
     $path = path("foo.txt");
     say $path->stringify; # same as "$path"
 
-Returns a string representation of the path.
+Returns a string representation of the path.  Unlike C<canonpath>, this method
+returns the path standardized with Unix-style C</> directory separators.
 
 =head2 touch
 
@@ -706,6 +806,24 @@ equivalent to what L<File::Spec> would give from C<splitpath> and thus
 usually is the empty string on Unix-like operating systems.
 
 =for Pod::Coverage openr_utf8 opena_utf8 openw_utf8 openrw_utf8
+openr_raw opena_raw openw_raw openrw_raw
+
+=head1 CAVEATS
+
+=head2 utf8 vs UTF-8
+
+All the C<*_utf8> methods use C<encoding(UTF-8)>, which is the stricter mode.
+However, this can be significantly slower than C<:utf8>.  If you need
+performance and can accept the security risk, C<slurp({binmode => ":utf8"})
+might be faster.
+
+Another option might be to read using C<:raw> and then pass the result
+to C<Encode::decode> yourself.
+
+=head1 TYPE CONSTRAINTS AND COERCION
+
+A standard L<MooseX::Types> library is available at
+L<MooseX::Types::Path::Tiny>.
 
 =head1 SEE ALSO
 

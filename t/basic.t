@@ -53,6 +53,11 @@ is $file->dirname, '/foo/baz/';
 is $file->parent, '/foo/baz';
 
 {
+    my $file = path("foo/bar/baz");
+    is( $file->canonpath, File::Spec->canonpath("$file"), "canonpath" );
+}
+
+{
   my $dir = path('/foo/bar/baz');
   is $dir->parent, '/foo/bar';
   is $dir->parent->parent, '/foo';
@@ -78,7 +83,7 @@ is $file->parent, '/foo/baz';
   is path(''), '.';
   is path(), '.';
   is path('', 'var', 'tmp'), 'var/tmp';
-  is path()->absolute, path(Cwd::cwd());
+  is path()->absolute, path(Cwd::getcwd());
   is path(undef), '.';
 }
 
@@ -97,6 +102,7 @@ is $file->parent, '/foo/baz';
     my $file = Path::Tiny->new(File::Spec->rootdir);
     my $root = Path::Tiny->rootdir;
     is( $file, $root, "rootdir is like path('/')");
+    is( $file->child("lib"), "/lib", "child of rootdir is correct");
 }
 
 done_testing();

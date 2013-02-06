@@ -2,8 +2,6 @@ use 5.008001;
 use strict;
 use warnings;
 use Test::More 0.96;
-use Test::Deep '!blessed';
-use File::Spec::Unix;
 
 use Path::Tiny;
 
@@ -43,6 +41,12 @@ subtest "spew -> slurp (UTF-8)" => sub {
     is( $file->slurp_utf8, join( '', _utf8_lines ), "slurp" );
 };
 
+subtest "spew -> slurp (raw)" => sub {
+    my $file = Path::Tiny->tempfile;
+    ok( $file->spew_raw(_lines), "spew" );
+    is( $file->slurp_raw, join( '', _lines ), "slurp" );
+};
+
 subtest "spew -> lines" => sub {
     my $file = Path::Tiny->tempfile;
     ok( $file->spew(_lines), "spew" );
@@ -53,6 +57,12 @@ subtest "spew -> lines (UTF-8)" => sub {
     my $file = Path::Tiny->tempfile;
     ok( $file->spew_utf8(_utf8_lines), "spew" );
     is( join( '', $file->lines_utf8 ), join( '', _utf8_lines ), "lines" );
+};
+
+subtest "spew -> lines (raw)" => sub {
+    my $file = Path::Tiny->tempfile;
+    ok( $file->spew_raw(_lines), "spew" );
+    is( join( '', $file->lines_raw ), join( '', _lines ), "lines" );
 };
 
 subtest "spew -> lines (count)" => sub {
@@ -76,6 +86,13 @@ subtest "spew -> lines (count, UTF-8)" => sub {
     ok( $file->spew_utf8(_utf8_lines), "spew" );
     my @exp = _utf8_lines;
     is( join( '', $file->lines_utf8( { count => 3 } ) ), join( '', @exp ), "lines" );
+};
+
+subtest "spew -> lines (count, raw)" => sub {
+    my $file = Path::Tiny->tempfile;
+    ok( $file->spew_raw(_lines), "spew" );
+    my @exp = _lines;
+    is( join( '', $file->lines_raw( { count => 2 } ) ), join( '', @exp ), "lines" );
 };
 
 subtest "append -> slurp" => sub {
@@ -108,6 +125,12 @@ subtest "append -> slurp (UTF-8)" => sub {
     is( $file->slurp_utf8, join( '', _utf8_lines ), "slurp" );
 };
 
+subtest "append -> slurp (raw)" => sub {
+    my $file = Path::Tiny->tempfile;
+    ok( $file->append_raw(_lines), "append" );
+    is( $file->slurp_raw, join( '', _lines ), "slurp" );
+};
+
 subtest "openw -> openr" => sub {
     my $file = Path::Tiny->tempfile;
     {
@@ -131,6 +154,19 @@ subtest "openw -> openr (UTF-8)" => sub {
         my $fh = $file->openr_utf8;
         my $got = do { local $/, <$fh> };
         is( $got, join( '', _utf8_lines ), "openr & read" );
+    }
+};
+
+subtest "openw -> openr (raw)" => sub {
+    my $file = Path::Tiny->tempfile;
+    {
+        my $fh = $file->openw_raw;
+        ok( ( print {$fh} _lines ), "openw & print" );
+    }
+    {
+        my $fh = $file->openr_raw;
+        my $got = do { local $/, <$fh> };
+        is( $got, join( '', _lines ), "openr & read" );
     }
 };
 
@@ -170,6 +206,24 @@ subtest "opena -> openr (UTF-8)" => sub {
     }
 };
 
+subtest "opena -> openr (raw)" => sub {
+    my $file  = Path::Tiny->tempfile;
+    my @lines = _lines;
+    {
+        my $fh = $file->openw_raw;
+        ok( ( print {$fh} shift @lines ), "openw & print one line" );
+    }
+    {
+        my $fh = $file->opena_raw;
+        ok( ( print {$fh} @lines ), "opena & print rest of lines" );
+    }
+    {
+        my $fh = $file->openr_raw;
+        my $got = do { local $/, <$fh> };
+        is( $got, join( '', _lines ), "openr & read" );
+    }
+};
+
 subtest "openrw" => sub {
     my $file = Path::Tiny->tempfile;
     my $fh   = $file->openrw;
@@ -181,11 +235,20 @@ subtest "openrw" => sub {
 
 subtest "openrw (UTF-8)" => sub {
     my $file = Path::Tiny->tempfile;
-    my $fh   = $file->openrw;
+    my $fh   = $file->openrw_utf8;
     ok( ( print {$fh} _utf8_lines ), "openrw & print" );
     ok( seek( $fh, 0, 0 ), "seek back to start" );
     my $got = do { local $/, <$fh> };
     is( $got, join( '', _utf8_lines ), "openr & read" );
+};
+
+subtest "openrw (raw)" => sub {
+    my $file = Path::Tiny->tempfile;
+    my $fh   = $file->openrw_raw;
+    ok( ( print {$fh} _lines ), "openrw & print" );
+    ok( seek( $fh, 0, 0 ), "seek back to start" );
+    my $got = do { local $/, <$fh> };
+    is( $got, join( '', _lines ), "openr & read" );
 };
 
 done_testing;

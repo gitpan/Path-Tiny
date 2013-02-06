@@ -168,16 +168,20 @@ my $tmpdir = Path::Tiny->tempdir;
     ok -e $file;
 
     my $content = $file->slurp( { binmode => ':raw' } );
-    is $content, "Line1\r\nLine2\r\n\302\261\r\n";
+    is $content, "Line1\r\nLine2\r\n\302\261\r\n", "slurp raw";
 
     my $line3 = "\302\261\n";
     utf8::decode($line3);
+
+    $content = $file->slurp( { binmode => ':crlf:utf8' } );
+    is $content, "Line1\nLine2\n" . $line3, "slurp+crlf+utf8";
+
     my @content = $file->lines( { binmode => ':crlf:utf8' } );
-    is_deeply \@content, [ "Line1\n", "Line2\n", $line3 ];
+    is_deeply \@content, [ "Line1\n", "Line2\n", $line3 ], "lines+crlf+utf8";
 
     chop($line3);
     @content = $file->lines( { chomp => 1, binmode => ':crlf:utf8' } );
-    is_deeply \@content, [ "Line1", "Line2", $line3 ];
+    is_deeply \@content, [ "Line1", "Line2", $line3 ], "lines+chomp+crlf+utf8";
 
     $file->remove;
     ok not -e $file;
@@ -202,13 +206,32 @@ my $tmpdir = Path::Tiny->tempdir;
 }
 
 {
+    # realpath should resolve ..
+    my $lib = path("t/../lib");
+    my $real = $lib->realpath;
+    unlike $real, qr/\.\./, "updir gone from realpath";
+    SKIP: {
+        skip "standand unix bin/sbin not present", 1
+            unless -d "/sbin" && -d "/bin";
+        my $abs = path("/bin/../sbin");
+        is( $abs->realpath, "/sbin", "realpath on absolute" );
+    }
+}
+
+
+{
     my $file = $tmpdir->child("foo.txt");
     $file->spew("Hello World\n");
     my $copy = $tmpdir->child("bar.txt");
     $file->copy($copy);
     is( $copy->slurp, "Hello World\n", "file copied" );
     chmod 0400, $copy; # read only
-    ok( exception { $file->copy($copy) }, "copy throws error if permission denied" );
+    SKIP: {
+        skip "No exception if run as root", 1 if $> == 0;
+        skip "No exception writing to read-only file", 1
+          unless exception { open my $fh, ">", "$copy" or die }; # probe if actually read-only
+        ok( exception { $file->copy($copy) }, "copy throws error if permission denied" );
+    }
 }
 
 SKIP: {

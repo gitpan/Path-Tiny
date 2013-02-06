@@ -14,7 +14,6 @@ my %WriteMakefileArgs = (
   "BUILD_REQUIRES" => {
     "File::Find" => 0,
     "File::Spec::Unix" => 0,
-    "Path::Class" => 0,
     "Test::Deep" => 0,
     "Test::Fatal" => 0,
     "Test::More" => "0.96"
@@ -41,7 +40,7 @@ my %WriteMakefileArgs = (
     "strict" => 0,
     "warnings" => 0
   },
-  "VERSION" => "0.003",
+  "VERSION" => "0.004",
   "test" => {
     "TESTS" => "t/*.t"
   }
