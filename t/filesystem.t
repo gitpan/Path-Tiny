@@ -5,6 +5,7 @@ use Test::More 0.96;
 use Test::Fatal;
 use File::Temp qw(tmpnam tempdir);
 use File::Spec;
+use Cwd;
 
 use Path::Tiny;
 
@@ -210,12 +211,10 @@ my $tmpdir = Path::Tiny->tempdir;
     my $lib = path("t/../lib");
     my $real = $lib->realpath;
     unlike $real, qr/\.\./, "updir gone from realpath";
-    SKIP: {
-        skip "standand unix bin/sbin not present", 1
-            unless -d "/sbin" && -d "/bin";
-        my $abs = path("/bin/../sbin");
-        is( $abs->realpath, "/sbin", "realpath on absolute" );
-    }
+    my $abs_lib = $lib->absolute;
+    my $abs_t = path("t")->absolute;
+    my $case = $abs_t->child("../lib");
+    is( $case->realpath, $lib->realpath, "realpath on absolute" );
 }
 
 

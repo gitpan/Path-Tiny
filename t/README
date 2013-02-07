@@ -2,7 +2,7 @@ NAME
     Path::Tiny - File path utility
 
 VERSION
-    version 0.004
+    version 0.005
 
 SYNOPSIS
       use Path::Tiny;
@@ -58,6 +58,10 @@ DESCRIPTION
 
     File input/output methods "flock" handles before reading or writing, as
     appropriate.
+
+    The *_utf8 methods ("slurp_utf8", "lines_utf8", etc.) operate in raw
+    mode without CRLF translation. Installing Unicode::UTF8 will speed up
+    several of them and is highly recommended.
 
 CONSTRUCTORS
   path
@@ -130,7 +134,10 @@ METHODS
   append_utf8
         path("foo.txt")->append_utf8(@data);
 
-    This is like "append" with a "binmode" of ":encoding(UTF-8)".
+    This is like "append" with a "binmode" of ":unix:encoding(UTF-8)".
+
+    If Unicode::UTF8 is installed, a raw append will be done instead on the
+    data encoded with "Unicode::UTF8".
 
   basename
         $name = path("foo/bar.txt")->basename; # bar.txt
@@ -181,7 +188,7 @@ METHODS
 
     Returns an open file handle. The $mode argument must be a Perl-style
     read/write mode string ("<" ,">", "<<", etc.). If a $binmode is given,
-    it is passed to "binmode" on the handle.
+    it is set during the "open" call.
 
     See "openr", "openw", "openrw", and "opena" for sugar.
 
@@ -243,7 +250,12 @@ METHODS
   lines_utf8
         @contents = path("/tmp/foo.txt")->lines_utf8;
 
-    This is like "lines" with a "binmode" of ":encoding(UTF-8)".
+    This is like "lines" with a "binmode" of ":raw:encoding(UTF-8)".
+
+    If Unicode::UTF8 is installed, a raw UTF-8 slurp will be done and then
+    the lines will be split. This is actually faster than relying on
+    ":encoding(UTF-8)", though a bit memory intensive. If memory use is a
+    concern, consider "openr_utf8" and iterating directly on the handle.
 
   lstat
         $stat = path("/some/symlink")->lstat;
@@ -282,7 +294,7 @@ METHODS
     Returns a file handle opened in the specified mode. The "openr" style
     methods take a single "binmode" argument. All of the "open*" methods
     have "open*_raw" and "open*_utf8" equivalents that use ":raw" and
-    ":encoding(UTF-8)", respectively.
+    ":raw:encoding(UTF-8)", respectively.
 
   parent
         $parent = path("foo/bar/baz")->parent; # foo/bar
@@ -338,7 +350,11 @@ METHODS
   slurp_utf8
         $data = path("foo.txt")->slurp_utf8;
 
-    This is like "slurp" with a "binmode" of ":encoding(UTF-8)".
+    This is like "slurp" with a "binmode" of ":unix:encoding(UTF-8)".
+
+    If Unicode::UTF8 is installed, a raw slurp will be done instead and the
+    result decoded with "Unicode::UTF8". This is is just as strict and is
+    roughly an order of magnitude faster than using ":encoding(UTF-8)".
 
   spew
         path("foo.txt")->spew(@data);
@@ -359,7 +375,10 @@ METHODS
   spew_utf8
         path("foo.txt")->spew_utf8(@data);
 
-    This is like "spew" with a "binmode" of ":encoding(UTF-8)".
+    This is like "spew" with a "binmode" of ":unix:encoding(UTF-8)".
+
+    If Unicode::UTF8 is installed, a raw spew will be done instead on the
+    data encoded with "Unicode::UTF8".
 
   stat
         $stat = path("foo.txt")->stat;
@@ -389,13 +408,30 @@ METHODS
 
 CAVEATS
   utf8 vs UTF-8
-    All the *_utf8 methods use "encoding(UTF-8)", which is the stricter
-    mode. However, this can be significantly slower than ":utf8". If you
-    need performance and can accept the security risk, "slurp({binmode ="
-    ":utf8"}) might be faster.
+    All the *_utf8 methods use ":encoding(UTF-8)" -- either as
+    ":unix:encoding(UTF-8)" (unbuffered) or ":raw:encoding(UTF-8)"
+    (buffered) -- which is strict against the Unicode spec and disallows
+    illegal Unicode codepoints or UTF-8 sequences.
 
-    Another option might be to read using ":raw" and then pass the result to
-    "Encode::decode" yourself.
+    Unfortunately, ":encoding(UTF-8)" is very, very slow. If you install
+    Unicode::UTF8, that module will be used by some *_utf8 methods to encode
+    or decode data after a raw, binary input/output operation, which is much
+    faster.
+
+    If you need the performance and can accept the security risk,
+    "slurp({binmode => ":unix:utf8"})" will be faster than
+    ":unix:encoding(UTF-8)" (but not as fast as "Unicode::UTF8").
+
+    Note that the *_utf8 methods read in raw mode. There is no CRLF
+    translation on Windows. If you must have CRLF translation, use the
+    regular input/output methods with an appropriate binmode:
+
+      $path->spew_utf8($data);                            # raw
+      $path->spew({binmode => ":encoding(UTF-8)"}, $data; # LF -> CRLF
+
+    Consider PerlIO::utf8_strict for a faster PerlIO layer alternative to
+    ":encoding(UTF-8)", though it does not appear to be as fast as the
+    "Unicode::UTF8" approach.
 
 TYPE CONSTRAINTS AND COERCION
     A standard MooseX::Types library is available at

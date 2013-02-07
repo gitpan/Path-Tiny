@@ -12,6 +12,7 @@ my %WriteMakefileArgs = (
   "ABSTRACT" => "File path utility",
   "AUTHOR" => "David Golden <dagolden\@cpan.org>",
   "BUILD_REQUIRES" => {
+    "Devel::Hide" => 0,
     "File::Find" => 0,
     "File::Spec::Unix" => 0,
     "Test::Deep" => 0,
@@ -40,7 +41,7 @@ my %WriteMakefileArgs = (
     "strict" => 0,
     "warnings" => 0
   },
-  "VERSION" => "0.004",
+  "VERSION" => "0.005",
   "test" => {
     "TESTS" => "t/*.t"
   }

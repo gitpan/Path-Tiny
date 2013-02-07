@@ -10,15 +10,17 @@ add_stopwords(<DATA>);
 all_pod_files_spelling_ok('bin', 'lib');
 __DATA__
 BENCHMARKING
+CRLF
 Stringifying
 canonpath
+codepoints
 dirname
 lstat
 mkpath
-openr
-openw
 opena
+openr
 openrw
+openw
 realpath
 subclasses
 unlinked

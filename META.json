@@ -39,6 +39,9 @@
          }
       },
       "runtime" : {
+         "recommends" : {
+            "Unicode::UTF8" : "0"
+         },
          "requires" : {
             "Cwd" : "0",
             "Exporter" : "0",
@@ -58,6 +61,7 @@
       },
       "test" : {
          "requires" : {
+            "Devel::Hide" : "0",
             "File::Find" : "0",
             "File::Spec::Unix" : "0",
             "Test::Deep" : "0",
@@ -69,7 +73,7 @@
    "provides" : {
       "Path::Tiny" : {
          "file" : "lib/Path/Tiny.pm",
-         "version" : "0.004"
+         "version" : "0.005"
       }
    },
    "release_status" : "stable",
@@ -84,6 +88,6 @@
          "web" : "https://github.com/dagolden/path-tiny"
       }
    },
-   "version" : "0.004"
+   "version" : "0.005"
 }
 
