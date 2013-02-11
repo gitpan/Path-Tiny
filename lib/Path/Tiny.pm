@@ -4,7 +4,7 @@ use warnings;
 
 package Path::Tiny;
 # ABSTRACT: File path utility
-our $VERSION = '0.005'; # VERSION
+our $VERSION = '0.006'; # VERSION
 
 # Dependencies
 use autodie 2.00;
@@ -57,7 +57,7 @@ sub path {
 }
 
 
-sub new { path( $_[1] ) }
+sub new { shift; path( @_ ) }
 
 
 sub rootdir { path( File::Spec->rootdir ) }
@@ -419,7 +419,7 @@ Path::Tiny - File path utility
 
 =head1 VERSION
 
-version 0.005
+version 0.006
 
 =head1 SYNOPSIS
 

@@ -13,8 +13,11 @@ my %WriteMakefileArgs = (
   "AUTHOR" => "David Golden <dagolden\@cpan.org>",
   "BUILD_REQUIRES" => {
     "Devel::Hide" => 0,
+    "ExtUtils::MakeMaker" => 0,
     "File::Find" => 0,
+    "File::Spec::Functions" => 0,
     "File::Spec::Unix" => 0,
+    "List::Util" => 0,
     "Test::Deep" => 0,
     "Test::Fatal" => 0,
     "Test::More" => "0.96"
@@ -41,7 +44,7 @@ my %WriteMakefileArgs = (
     "strict" => 0,
     "warnings" => 0
   },
-  "VERSION" => "0.005",
+  "VERSION" => "0.006",
   "test" => {
     "TESTS" => "t/*.t"
   }
