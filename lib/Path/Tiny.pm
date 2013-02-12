@@ -4,7 +4,7 @@ use warnings;
 
 package Path::Tiny;
 # ABSTRACT: File path utility
-our $VERSION = '0.006'; # VERSION
+our $VERSION = '0.007'; # VERSION
 
 # Dependencies
 use autodie 2.00;
@@ -40,6 +40,10 @@ sub CLONE { $TID = threads->tid }; # if cloning, threads should be loaded
 
 my $HAS_UU;                        # has Unicode::UTF8; lazily populated
 
+sub _check_UU {
+    eval { require Unicode::UTF8; Unicode::UTF8->VERSION(0.58); 1 };
+}
+
 #--------------------------------------------------------------------------#
 # Constructors
 #--------------------------------------------------------------------------#
@@ -57,7 +61,7 @@ sub path {
 }
 
 
-sub new { shift; path( @_ ) }
+sub new { shift; path(@_) }
 
 
 sub rootdir { path( File::Spec->rootdir ) }
@@ -114,7 +118,7 @@ sub append_raw { splice @_, 1, 0, { binmode => ":unix" }; goto &append }
 
 
 sub append_utf8 {
-    if ( $HAS_UU //= eval { require Unicode::UTF8; 1 } ) {
+    if ( $HAS_UU //= _check_UU() ) {
         my $self = shift;
         append( $self, { binmode => ":unix" }, map { Unicode::UTF8::encode_utf8($_) } @_ );
     }
@@ -232,9 +236,14 @@ sub lines_raw {
 
 sub lines_utf8 {
     $_[1] = {} unless ref $_[1] eq 'HASH';
-    if ( $HAS_UU //= eval { require Unicode::UTF8; 1 } && !$_[1]->{count} ) {
+    if ( ( $HAS_UU //= _check_UU() ) && !$_[1]->{count} ) {
         # when we split, we lose the \n, so put *back* the \n if not chomping
-        return map { $_[1]->{chomp} ? $_ : ($_ .= "\n") } split /\n/, slurp_utf8( $_[0] ); ## no critic
+        if( $_[1]->{chomp} ) {
+            return  split /\n/, slurp_utf8( $_[0] );
+        }
+        else {
+            return split /(?<=\n)/, slurp_utf8( $_[0] );
+        }
     }
     else {
         $_[1]->{binmode} = ":raw:encoding(UTF-8)";
@@ -338,7 +347,7 @@ sub slurp_raw { $_[1] = { binmode => ":unix" }; goto &slurp }
 
 
 sub slurp_utf8 {
-    if ( $HAS_UU //= eval { require Unicode::UTF8; 1 } ) {
+    if ( $HAS_UU //= _check_UU() ) {
         return Unicode::UTF8::decode_utf8( slurp( $_[0], { binmode => ":unix" } ) );
     }
     else {
@@ -368,7 +377,7 @@ sub spew_raw { splice @_, 1, 0, { binmode => ":unix" }; goto &spew }
 
 
 sub spew_utf8 {
-    if ( $HAS_UU //= eval { require Unicode::UTF8; 1 } ) {
+    if ( $HAS_UU //= _check_UU() ) {
         my $self = shift;
         spew( $self, { binmode => ":unix" }, map { Unicode::UTF8::encode_utf8($_) } @_ );
     }
@@ -419,7 +428,7 @@ Path::Tiny - File path utility
 
 =head1 VERSION
 
-version 0.006
+version 0.007
 
 =head1 SYNOPSIS
 
@@ -478,9 +487,9 @@ the object gives you back the path (after some clean up).
 File input/output methods C<flock> handles before reading or writing,
 as appropriate.
 
-The C<*_utf8> methods (C<slurp_utf8>, C<lines_utf8>, etc.) operate in raw mode
-without CRLF translation.  Installing L<Unicode::UTF8> will speed up several
-of them and is highly recommended.
+The C<*_utf8> methods (C<slurp_utf8>, C<lines_utf8>, etc.) operate in raw
+mode without CRLF translation.  Installing L<Unicode::UTF8> 0.58 or later
+will speed up several of them and is highly recommended.
 
 =head1 CONSTRUCTORS
 
@@ -562,7 +571,7 @@ This is like C<append> with a C<binmode> of C<:unix> for fast, unbuffered, raw w
 
 This is like C<append> with a C<binmode> of C<:unix:encoding(UTF-8)>.
 
-If L<Unicode::UTF8> is installed, a raw append will be done instead on the data
+If L<Unicode::UTF8> 0.58+ is installed, a raw append will be done instead on the data
 encoded with C<Unicode::UTF8>.
 
 =head2 basename
@@ -694,7 +703,7 @@ of C<:unix> so PerlIO buffering can manage reading by line.
 
 This is like C<lines> with a C<binmode> of C<:raw:encoding(UTF-8)>.
 
-If L<Unicode::UTF8> is installed, a raw UTF-8 slurp will be done and then the
+If L<Unicode::UTF8> 0.58+ is installed, a raw UTF-8 slurp will be done and then the
 lines will be split.  This is actually faster than relying on C<:encoding(UTF-8)>,
 though a bit memory intensive.  If memory use is a concern, consider C<openr_utf8>
 and iterating directly on the handle.
@@ -804,7 +813,7 @@ a fast, unbuffered, raw read.
 
 This is like C<slurp> with a C<binmode> of C<:unix:encoding(UTF-8)>.
 
-If L<Unicode::UTF8> is installed, a raw slurp will be done instead and the
+If L<Unicode::UTF8> 0.58+ is installed, a raw slurp will be done instead and the
 result decoded with C<Unicode::UTF8>.  This is is just as strict and is roughly
 an order of magnitude faster than using C<:encoding(UTF-8)>.
 
@@ -830,7 +839,7 @@ This is like C<spew> with a C<binmode> of C<:unix> for a fast, unbuffered, raw w
 
 This is like C<spew> with a C<binmode> of C<:unix:encoding(UTF-8)>.
 
-If L<Unicode::UTF8> is installed, a raw spew will be done instead on the data
+If L<Unicode::UTF8> 0.58+ is installed, a raw spew will be done instead on the data
 encoded with C<Unicode::UTF8>.
 
 =head2 stat
@@ -875,9 +884,9 @@ which is strict against the Unicode spec and disallows illegal Unicode
 codepoints or UTF-8 sequences.
 
 Unfortunately, C<:encoding(UTF-8)> is very, very slow.  If you install
-L<Unicode::UTF8>, that module will be used by some C<*_utf8> methods to encode
-or decode data after a raw, binary input/output operation, which is much
-faster.
+L<Unicode::UTF8> 0.58 or later, that module will be used by some C<*_utf8>
+methods to encode or decode data after a raw, binary input/output operation,
+which is much faster.
 
 If you need the performance and can accept the security risk,
 C<< slurp({binmode => ":unix:utf8"}) >> will be faster than C<:unix:encoding(UTF-8)>

@@ -2,7 +2,7 @@ NAME
     Path::Tiny - File path utility
 
 VERSION
-    version 0.006
+    version 0.007
 
 SYNOPSIS
       use Path::Tiny;
@@ -60,8 +60,8 @@ DESCRIPTION
     appropriate.
 
     The *_utf8 methods ("slurp_utf8", "lines_utf8", etc.) operate in raw
-    mode without CRLF translation. Installing Unicode::UTF8 will speed up
-    several of them and is highly recommended.
+    mode without CRLF translation. Installing Unicode::UTF8 0.58 or later
+    will speed up several of them and is highly recommended.
 
 CONSTRUCTORS
   path
@@ -136,8 +136,8 @@ METHODS
 
     This is like "append" with a "binmode" of ":unix:encoding(UTF-8)".
 
-    If Unicode::UTF8 is installed, a raw append will be done instead on the
-    data encoded with "Unicode::UTF8".
+    If Unicode::UTF8 0.58+ is installed, a raw append will be done instead
+    on the data encoded with "Unicode::UTF8".
 
   basename
         $name = path("foo/bar.txt")->basename; # bar.txt
@@ -252,8 +252,8 @@ METHODS
 
     This is like "lines" with a "binmode" of ":raw:encoding(UTF-8)".
 
-    If Unicode::UTF8 is installed, a raw UTF-8 slurp will be done and then
-    the lines will be split. This is actually faster than relying on
+    If Unicode::UTF8 0.58+ is installed, a raw UTF-8 slurp will be done and
+    then the lines will be split. This is actually faster than relying on
     ":encoding(UTF-8)", though a bit memory intensive. If memory use is a
     concern, consider "openr_utf8" and iterating directly on the handle.
 
@@ -352,9 +352,10 @@ METHODS
 
     This is like "slurp" with a "binmode" of ":unix:encoding(UTF-8)".
 
-    If Unicode::UTF8 is installed, a raw slurp will be done instead and the
-    result decoded with "Unicode::UTF8". This is is just as strict and is
-    roughly an order of magnitude faster than using ":encoding(UTF-8)".
+    If Unicode::UTF8 0.58+ is installed, a raw slurp will be done instead
+    and the result decoded with "Unicode::UTF8". This is is just as strict
+    and is roughly an order of magnitude faster than using
+    ":encoding(UTF-8)".
 
   spew
         path("foo.txt")->spew(@data);
@@ -377,8 +378,8 @@ METHODS
 
     This is like "spew" with a "binmode" of ":unix:encoding(UTF-8)".
 
-    If Unicode::UTF8 is installed, a raw spew will be done instead on the
-    data encoded with "Unicode::UTF8".
+    If Unicode::UTF8 0.58+ is installed, a raw spew will be done instead on
+    the data encoded with "Unicode::UTF8".
 
   stat
         $stat = path("foo.txt")->stat;
@@ -414,9 +415,9 @@ CAVEATS
     illegal Unicode codepoints or UTF-8 sequences.
 
     Unfortunately, ":encoding(UTF-8)" is very, very slow. If you install
-    Unicode::UTF8, that module will be used by some *_utf8 methods to encode
-    or decode data after a raw, binary input/output operation, which is much
-    faster.
+    Unicode::UTF8 0.58 or later, that module will be used by some *_utf8
+    methods to encode or decode data after a raw, binary input/output
+    operation, which is much faster.
 
     If you need the performance and can accept the security risk,
     "slurp({binmode => ":unix:utf8"})" will be faster than
