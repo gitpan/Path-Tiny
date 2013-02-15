@@ -1,10 +1,10 @@
-use v5.10;
+use 5.008001;
 use strict;
 use warnings;
 
 package Path::Tiny;
 # ABSTRACT: File path utility
-our $VERSION = '0.008'; # VERSION
+our $VERSION = '0.009'; # VERSION
 
 # Dependencies
 use autodie 2.00;
@@ -13,7 +13,7 @@ use Exporter   (qw/import/);
 use Fcntl      (qw/:flock SEEK_END/);
 use File::Copy ();
 use File::stat ();
-use File::Path 2.07 ();
+{ no warnings; use File::Path 2.07 (); } # avoid "2.07_02 isn't numeric"
 use File::Spec 3.40 ();
 use File::Temp 0.18 ();
 
@@ -50,8 +50,8 @@ sub _check_UU {
 
 
 sub path {
-    my $path = shift // ".";
-    $path = "." unless length $path;
+    my $path = shift;
+    $path = "." unless defined $path && length $path;
     # join stringifies any objects, too, which is handy :-)
     $path = join( "/", ( $path eq '/' ? "" : $path ), @_ ) if @_;
     my $cpath = $path = File::Spec->canonpath($path); # ugh, but probably worth it
@@ -98,7 +98,7 @@ sub _splitpath {
 sub absolute {
     my ( $self, $base ) = @_;
     return $self if $self->is_absolute;
-    return path( join "/", $base // Cwd::getcwd, $_[0]->[PATH] );
+    return path( join "/", ( defined($base) ? $base : Cwd::getcwd ), $_[0]->[PATH] );
 }
 
 
@@ -117,7 +117,7 @@ sub append_raw { splice @_, 1, 0, { binmode => ":unix" }; goto &append }
 
 
 sub append_utf8 {
-    if ( $HAS_UU //= _check_UU() ) {
+    if ( defined($HAS_UU) ? $HAS_UU : $HAS_UU = _check_UU() ) {
         my $self = shift;
         append( $self, { binmode => ":unix" }, map { Unicode::UTF8::encode_utf8($_) } @_ );
     }
@@ -173,8 +173,8 @@ sub exists { -e $_[0]->[PATH] }
 
 sub filehandle {
     my ( $self, $mode, $binmode ) = @_;
-    $mode    //= "<";
-    $binmode //= "";
+    $mode    = "<" unless defined $mode;
+    $binmode = ""  unless defined $binmode;
     open my $fh, "$mode$binmode", $self->[PATH];
     return $fh;
 }
@@ -218,7 +218,7 @@ sub lines {
     if ( $args->{count} ) {
         return map { chomp if $chomp; $_ } map { scalar <$fh> } 1 .. $args->{count};
     }
-    elsif ( $chomp ) {
+    elsif ($chomp) {
         return map { chomp; $_ } <$fh>;
     }
     else {
@@ -241,7 +241,10 @@ sub lines_raw {
 
 sub lines_utf8 {
     $_[1] = {} unless ref $_[1] eq 'HASH';
-    if ( ( $HAS_UU //= _check_UU() ) && $_[1]->{chomp} && !$_[1]->{count} ) {
+    if (   ( defined($HAS_UU) ? $HAS_UU : $HAS_UU = _check_UU() )
+        && $_[1]->{chomp}
+        && !$_[1]->{count} )
+    {
         return split /\n/, slurp_utf8( $_[0] ); ## no critic
     }
     else {
@@ -329,7 +332,9 @@ sub slurp {
     $args = {} unless ref $args eq 'HASH';
     my $fh = $self->filehandle( "<", $args->{binmode} );
     flock( $fh, LOCK_SH );
-    if ( ( $args->{binmode} // "" ) eq ":unix" and my $size = -s $fh ) {
+    if ( ( defined( $args->{binmode} ) ? $args->{binmode} : "" ) eq ":unix"
+        and my $size = -s $fh )
+    {
         my $buf;
         read $fh, $buf, $size; # File::Slurp in a nutshell
         return $buf;
@@ -345,7 +350,7 @@ sub slurp_raw { $_[1] = { binmode => ":unix" }; goto &slurp }
 
 
 sub slurp_utf8 {
-    if ( $HAS_UU //= _check_UU() ) {
+    if ( defined($HAS_UU) ? $HAS_UU : $HAS_UU = _check_UU() ) {
         return Unicode::UTF8::decode_utf8( slurp( $_[0], { binmode => ":unix" } ) );
     }
     else {
@@ -375,7 +380,7 @@ sub spew_raw { splice @_, 1, 0, { binmode => ":unix" }; goto &spew }
 
 
 sub spew_utf8 {
-    if ( $HAS_UU //= _check_UU() ) {
+    if ( defined($HAS_UU) ? $HAS_UU : $HAS_UU = _check_UU() ) {
         my $self = shift;
         spew( $self, { binmode => ":unix" }, map { Unicode::UTF8::encode_utf8($_) } @_ );
     }
@@ -434,7 +439,7 @@ Path::Tiny - File path utility
 
 =head1 VERSION
 
-version 0.008
+version 0.009
 
 =head1 SYNOPSIS
 
