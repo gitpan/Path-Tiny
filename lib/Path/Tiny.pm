@@ -4,7 +4,7 @@ use warnings;
 
 package Path::Tiny;
 # ABSTRACT: File path utility
-our $VERSION = '0.007'; # VERSION
+our $VERSION = '0.008'; # VERSION
 
 # Dependencies
 use autodie 2.00;
@@ -109,7 +109,6 @@ sub append {
     flock( $fh, LOCK_EX );
     seek( $fh, 0, SEEK_END ); # ensure SEEK_END after flock
     print {$fh} $_ for @data;
-    flock( $fh, LOCK_UN );
     close $fh;                # force immediate flush
 }
 
@@ -215,35 +214,35 @@ sub lines {
     flock( $fh, LOCK_SH );
     my $chomp = $args->{chomp};
     my @lines;
+    # XXX more efficient to read @lines then chomp(@lines) vs map?
     if ( $args->{count} ) {
-        @lines = map { chomp if $chomp; $_ } map { scalar <$fh> } 1 .. $args->{count};
+        return map { chomp if $chomp; $_ } map { scalar <$fh> } 1 .. $args->{count};
+    }
+    elsif ( $chomp ) {
+        return map { chomp; $_ } <$fh>;
     }
     else {
-        @lines = $chomp ? ( map { chomp if $chomp; $_ } <$fh> ) : <$fh>;
+        return <$fh>;
     }
-    flock( $fh, LOCK_UN );
-    close $fh;
-    return @lines;
 }
 
 
 sub lines_raw {
     $_[1] = {} unless ref $_[1] eq 'HASH';
-    $_[1]->{binmode} = ":raw";
-    goto &lines;
+    if ( $_[1]->{chomp} && !$_[1]->{count} ) {
+        return split /\n/, slurp_raw( $_[0] ); ## no critic
+    }
+    else {
+        $_[1]->{binmode} = ":raw";
+        goto &lines;
+    }
 }
 
 
 sub lines_utf8 {
     $_[1] = {} unless ref $_[1] eq 'HASH';
-    if ( ( $HAS_UU //= _check_UU() ) && !$_[1]->{count} ) {
-        # when we split, we lose the \n, so put *back* the \n if not chomping
-        if( $_[1]->{chomp} ) {
-            return  split /\n/, slurp_utf8( $_[0] );
-        }
-        else {
-            return split /(?<=\n)/, slurp_utf8( $_[0] );
-        }
+    if ( ( $HAS_UU //= _check_UU() ) && $_[1]->{chomp} && !$_[1]->{count} ) {
+        return split /\n/, slurp_utf8( $_[0] ); ## no critic
     }
     else {
         $_[1]->{binmode} = ":raw:encoding(UTF-8)";
@@ -330,16 +329,15 @@ sub slurp {
     $args = {} unless ref $args eq 'HASH';
     my $fh = $self->filehandle( "<", $args->{binmode} );
     flock( $fh, LOCK_SH );
-    my $buf;
     if ( ( $args->{binmode} // "" ) eq ":unix" and my $size = -s $fh ) {
+        my $buf;
         read $fh, $buf, $size; # File::Slurp in a nutshell
+        return $buf;
     }
     else {
-        $buf = do { local $/; <$fh> };
+        local $/;
+        return scalar <$fh>;
     }
-    flock( $fh, LOCK_UN );
-    close $fh;
-    return $buf;
 }
 
 
@@ -407,6 +405,14 @@ sub touch {
 }
 
 
+sub touchpath {
+    my ($self) = @_;
+    my $parent = $self->parent;
+    $parent->mkpath unless $parent->exists;
+    $self->touch;
+}
+
+
 sub volume {
     my ($self) = @_;
     $self->_splitpath unless defined $self->[VOL];
@@ -428,7 +434,7 @@ Path::Tiny - File path utility
 
 =head1 VERSION
 
-version 0.007
+version 0.008
 
 =head1 SYNOPSIS
 
@@ -862,6 +868,13 @@ returns the path standardized with Unix-style C</> directory separators.
 
 Like the Unix C<touch> utility.  Creates the file if it doesn't exist, or else
 changes the modification and access times to the current time.
+
+=head2 touchpath
+
+    path("bar/baz/foo.txt")->touchpath;
+
+Combines C<mkpath> and C<touch>.  Creates the parent directory if it doesn't exist,
+before touching the file.
 
 =head2 volume
 

@@ -24,13 +24,9 @@ my @modules = qw(
   File::Temp
   File::stat
   List::Util
-  Pod::Coverage::TrustPod
-  Test::CPAN::Meta
   Test::Deep
   Test::Fatal
   Test::More
-  Test::Pod
-  Test::Pod::Coverage
   Unicode::UTF8
   autodie
   constant
@@ -46,6 +42,7 @@ my $cpan_meta = "CPAN::Meta";
 if ( -f "MYMETA.json" && eval "require $cpan_meta" ) { ## no critic
   if ( my $meta = eval { CPAN::Meta->load_file("MYMETA.json") } ) {
     my $prereqs = $meta->prereqs;
+    delete $prereqs->{develop};
     my %uniq = map {$_ => 1} map { keys %$_ } map { values %$_ } values %$prereqs;
     $uniq{$_} = 1 for @modules; # don't lose any static ones
     @modules = sort keys %uniq;
