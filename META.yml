@@ -32,7 +32,7 @@ no_index:
 provides:
   Path::Tiny:
     file: lib/Path/Tiny.pm
-    version: 0.009
+    version: 0.010
 recommends:
   Unicode::UTF8: 0.58
 requires:
@@ -54,4 +54,4 @@ resources:
   bugtracker: https://github.com/dagolden/path-tiny/issues
   homepage: https://metacpan.org/release/Path-Tiny
   repository: git://github.com/dagolden/path-tiny.git
-version: 0.009
+version: 0.010

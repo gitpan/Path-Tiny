@@ -4,7 +4,7 @@ use warnings;
 
 package Path::Tiny;
 # ABSTRACT: File path utility
-our $VERSION = '0.009'; # VERSION
+our $VERSION = '0.010'; # VERSION
 
 # Dependencies
 use autodie 2.00;
@@ -67,18 +67,40 @@ sub new { shift; path(@_) }
 sub rootdir { path( File::Spec->rootdir ) }
 
 
-sub tempfile { shift; unshift @_, 'new'; goto &_temp }
-
-
-sub tempdir { shift; unshift @_, 'newdir'; goto &_temp }
-
-sub _temp {
-    my ( $method, @args ) = @_;
-    my $temp = File::Temp->$method( TMPDIR => 1, @args );
-    close $temp if $method eq 'new'; # so we can unlink it safely if needed
+sub tempfile {
+    my $class = shift;
+    my ( $maybe_template, $args ) = _parse_file_temp_args(@_);
+    # File::Temp->new demands TEMPLATE
+    $args->{TEMPLATE} = $maybe_template->[0] if @$maybe_template;
+    my $temp = File::Temp->new( TMPDIR => 1, %$args );
+    close $temp;
     my $self = path($temp);
-    $self->[TEMP] = $temp;           # keep object alive while we are
+    $self->[TEMP] = $temp; # keep object alive while we are
     return $self;
+}
+
+
+sub tempdir {
+    my $class = shift;
+    my ( $maybe_template, $args ) = _parse_file_temp_args(@_);
+    # File::Temp->newdir demands leading template
+    my $temp = File::Temp->newdir( @$maybe_template, TMPDIR => 1, %$args );
+    my $self = path($temp);
+    $self->[TEMP] = $temp; # keep object alive while we are
+    return $self;
+}
+
+# normalize the various ways File::Temp does templates
+sub _parse_file_temp_args {
+    my $leading_template = ( scalar(@_) % 2 == 1 ? shift(@_) : '' );
+    my %args = @_;
+    %args = map { uc($_), $args{$_} } keys %args;
+    my @template = (
+          exists $args{TEMPLATE} ? delete $args{TEMPLATE}
+        : $leading_template      ? $leading_template
+        :                          ()
+    );
+    return ( \@template, \%args );
 }
 
 #--------------------------------------------------------------------------#
@@ -439,7 +461,7 @@ Path::Tiny - File path utility
 
 =head1 VERSION
 
-version 0.009
+version 0.010
 
 =head1 SYNOPSIS
 
@@ -534,11 +556,18 @@ picky for C<path("/")>.
     $temp = Path::Tiny->tempfile( @options );
 
 This passes the options to C<< File::Temp->new >> and returns a C<Path::Tiny>
-object with the file name.  If you want a template, you must use a C<TEMPLATE>
-named argument.  The C<TMPDIR> option is enabled by default.
+object with the file name.  The C<TMPDIR> option is enabled by default.
 
 The resulting C<File::Temp> object is cached. When the C<Path::Tiny> object is
 destroyed, the C<File::Temp> object will be as well.
+
+C<File::Temp> annoyingly requires you to specify a custom template in slightly
+different ways depending on which function or method you call, but
+C<Path::Tiny> lets you ignore that and can take either a leading template or a
+C<TEMPLATE> option and does the right thing.
+
+    $temp = Path::Tiny->tempfile( "customXXXXXXXX" );             # ok
+    $temp = Path::Tiny->tempfile( TEMPLATE => "customXXXXXXXX" ); # ok
 
 =head2 tempdir
 
