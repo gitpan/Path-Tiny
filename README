@@ -2,7 +2,7 @@ NAME
     Path::Tiny - File path utility
 
 VERSION
-    version 0.010
+    version 0.011
 
 SYNOPSIS
       use Path::Tiny;
@@ -125,6 +125,7 @@ METHODS
 
   append
         path("foo.txt")->append(@data);
+        path("foo.txt")->append(\@data);
         path("foo.txt")->append({binmode => ":raw"}, @data);
 
     Appends data to a file. The file is locked with "flock" prior to
@@ -366,6 +367,7 @@ METHODS
 
   spew
         path("foo.txt")->spew(@data);
+        path("foo.txt")->spew(\@data);
         path("foo.txt")->spew({binmode => ":raw"}, @data);
 
     Writes data to a file atomically. The file is written to a temporary
@@ -446,6 +448,14 @@ CAVEATS
     Consider PerlIO::utf8_strict for a faster PerlIO layer alternative to
     ":encoding(UTF-8)", though it does not appear to be as fast as the
     "Unicode::UTF8" approach.
+
+  Default IO layers and the open pragma
+    If you have Perl 5.10 or later, file input/output methods ("slurp",
+    "spew", etc.) and high-level handle opening methods ( "openr", "openw",
+    etc. but not "filehandle") respect default encodings set by the "-C"
+    switch or lexical open settings of the caller. For UTF-8, this is almost
+    certainly slower than using the dedicated "_utf8" methods if you have
+    Unicode::UTF8.
 
 TYPE CONSTRAINTS AND COERCION
     A standard MooseX::Types library is available at

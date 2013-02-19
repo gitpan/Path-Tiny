@@ -1,5 +1,15 @@
 Revision history for Path-Tiny
 
+0.011     2013-02-19 11:08:44 America/New_York
+
+    [CHANGED]
+
+    - slurp/spew/etc and openr/openw/etc now repect default layers
+      set by -C or the open pragma
+
+    - spew and append can now be given array references to output
+      to avoid extra copying
+
 0.010     2013-02-16 10:26:38 America/New_York
 
     [FIXED]

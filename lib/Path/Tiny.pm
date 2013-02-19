@@ -4,18 +4,18 @@ use warnings;
 
 package Path::Tiny;
 # ABSTRACT: File path utility
-our $VERSION = '0.010'; # VERSION
+our $VERSION = '0.011'; # VERSION
 
 # Dependencies
 use autodie 2.00;
+use Exporter 5.57   (qw/import/);
+use File::Spec 3.40 ();
+use File::Temp 0.18 ();
 use Cwd        ();
-use Exporter   (qw/import/);
 use Fcntl      (qw/:flock SEEK_END/);
 use File::Copy ();
 use File::stat ();
 { no warnings; use File::Path 2.07 (); } # avoid "2.07_02 isn't numeric"
-use File::Spec 3.40 ();
-use File::Temp 0.18 ();
 
 our @EXPORT = qw/path/;
 
@@ -127,10 +127,12 @@ sub absolute {
 sub append {
     my ( $self, @data ) = @_;
     my $args = ( @data && ref $data[0] eq 'HASH' ) ? shift @data : {};
-    my $fh = $self->filehandle( ">>", $args->{binmode} );
+    my $binmode = $args->{binmode};
+    $binmode = ( ( caller(0) )[10] || {} )->{'open>'} unless defined $binmode;
+    my $fh = $self->filehandle( ">>", $binmode );
     flock( $fh, LOCK_EX );
     seek( $fh, 0, SEEK_END ); # ensure SEEK_END after flock
-    print {$fh} $_ for @data;
+    print {$fh} map { ref eq 'ARRAY' ? @$_ : $_ } @data;
     close $fh;                # force immediate flush
 }
 
@@ -232,7 +234,9 @@ sub iterator {
 sub lines {
     my ( $self, $args ) = @_;
     $args = {} unless ref $args eq 'HASH';
-    my $fh = $self->filehandle( "<", $args->{binmode} );
+    my $binmode = $args->{binmode};
+    $binmode = ( ( caller(0) )[10] || {} )->{'open<'} unless defined $binmode;
+    my $fh = $self->filehandle( "<", $binmode );
     flock( $fh, LOCK_SH );
     my $chomp = $args->{chomp};
     my @lines;
@@ -296,7 +300,13 @@ my %opens = (
 
 while ( my ( $k, $v ) = each %opens ) {
     no strict 'refs';
-    *{$k}             = sub { $_[0]->filehandle( $v, $_[1] ) };
+    # must check for lexical IO mode hint
+    *{$k} = sub {
+        my ( $self, $binmode ) = @_;
+        $binmode = ( ( caller(0) )[10] || {} )->{ 'open' . substr( $v, -1, 1 ) }
+          unless defined $binmode;
+        $self->filehandle( $v, $binmode );
+    };
     *{ $k . "_raw" }  = sub { $_[0]->filehandle( $v, ":raw" ) };
     *{ $k . "_utf8" } = sub { $_[0]->filehandle( $v, ":raw:encoding(UTF-8)" ) };
 }
@@ -352,9 +362,11 @@ sub remove {
 sub slurp {
     my ( $self, $args ) = @_;
     $args = {} unless ref $args eq 'HASH';
-    my $fh = $self->filehandle( "<", $args->{binmode} );
+    my $binmode = $args->{binmode};
+    $binmode = ( ( caller(0) )[10] || {} )->{'open<'} unless defined $binmode;
+    my $fh = $self->filehandle( "<", $binmode );
     flock( $fh, LOCK_SH );
-    if ( ( defined( $args->{binmode} ) ? $args->{binmode} : "" ) eq ":unix"
+    if ( ( defined($binmode) ? $binmode : "" ) eq ":unix"
         and my $size = -s $fh )
     {
         my $buf;
@@ -386,12 +398,14 @@ sub slurp_utf8 {
 sub spew {
     my ( $self, @data ) = @_;
     my $args = ( @data && ref $data[0] eq 'HASH' ) ? shift @data : {};
+    my $binmode = $args->{binmode};
+    $binmode = ( ( caller(0) )[10] || {} )->{'open>'} unless defined $binmode;
     my $temp = path( $self->[PATH] . $TID . $$ );
-    my $fh   = $temp->filehandle( ">", $args->{binmode} );
+    my $fh = $temp->filehandle( ">", $binmode );
     flock( $fh, LOCK_EX );
     seek( $fh, 0, 0 );
     truncate( $fh, 0 );
-    print {$fh} @data;
+    print {$fh} map { ref eq 'ARRAY' ? @$_ : $_ } @data;
     flock( $fh, LOCK_UN );
     close $fh;
     $temp->move( $self->[PATH] );
@@ -461,7 +475,7 @@ Path::Tiny - File path utility
 
 =head1 VERSION
 
-version 0.010
+version 0.011
 
 =head1 SYNOPSIS
 
@@ -593,6 +607,7 @@ resolved, you must call the more expensive C<realpath> method instead.
 =head2 append
 
     path("foo.txt")->append(@data);
+    path("foo.txt")->append(\@data);
     path("foo.txt")->append({binmode => ":raw"}, @data);
 
 Appends data to a file.  The file is locked with C<flock> prior to writing.  An
@@ -860,6 +875,7 @@ an order of magnitude faster than using C<:encoding(UTF-8)>.
 =head2 spew
 
     path("foo.txt")->spew(@data);
+    path("foo.txt")->spew(\@data);
     path("foo.txt")->spew({binmode => ":raw"}, @data);
 
 Writes data to a file atomically.  The file is written to a temporary file in
@@ -949,6 +965,14 @@ input/output methods with an appropriate binmode:
 Consider L<PerlIO::utf8_strict> for a faster L<PerlIO> layer alternative to
 C<:encoding(UTF-8)>, though it does not appear to be as fast as the
 C<Unicode::UTF8> approach.
+
+=head2 Default IO layers and the open pragma
+
+If you have Perl 5.10 or later, file input/output methods (C<slurp>, C<spew>,
+etc.) and high-level handle opening methods ( C<openr>, C<openw>, etc. but not
+C<filehandle>) respect default encodings set by the C<-C> switch or lexical
+L<open> settings of the caller.  For UTF-8, this is almost certainly slower
+than using the dedicated C<_utf8> methods if you have L<Unicode::UTF8>.
 
 =head1 TYPE CONSTRAINTS AND COERCION
 

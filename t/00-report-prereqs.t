@@ -30,6 +30,7 @@ my @modules = qw(
   Unicode::UTF8
   autodie
   constant
+  open
   overload
   perl
   strict

@@ -20,7 +20,8 @@ my %WriteMakefileArgs = (
     "List::Util" => 0,
     "Test::Deep" => 0,
     "Test::Fatal" => 0,
-    "Test::More" => "0.96"
+    "Test::More" => "0.96",
+    "open" => 0
   },
   "CONFIGURE_REQUIRES" => {
     "ExtUtils::MakeMaker" => "6.30"
@@ -31,7 +32,7 @@ my %WriteMakefileArgs = (
   "NAME" => "Path::Tiny",
   "PREREQ_PM" => {
     "Cwd" => 0,
-    "Exporter" => 0,
+    "Exporter" => "5.57",
     "Fcntl" => 0,
     "File::Copy" => 0,
     "File::Path" => "2.07",
@@ -44,7 +45,7 @@ my %WriteMakefileArgs = (
     "strict" => 0,
     "warnings" => 0
   },
-  "VERSION" => "0.010",
+  "VERSION" => "0.011",
   "test" => {
     "TESTS" => "t/*.t"
   }
