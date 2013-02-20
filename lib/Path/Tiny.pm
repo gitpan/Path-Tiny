@@ -4,13 +4,14 @@ use warnings;
 
 package Path::Tiny;
 # ABSTRACT: File path utility
-our $VERSION = '0.011'; # VERSION
+our $VERSION = '0.012'; # VERSION
 
 # Dependencies
 use autodie 2.00;
 use Exporter 5.57   (qw/import/);
 use File::Spec 3.40 ();
 use File::Temp 0.18 ();
+use Carp       ();
 use Cwd        ();
 use Fcntl      (qw/:flock SEEK_END/);
 use File::Copy ();
@@ -51,7 +52,8 @@ sub _check_UU {
 
 sub path {
     my $path = shift;
-    $path = "." unless defined $path && length $path;
+    Carp::croak("path() requires a defined, positive-length argument")
+      unless defined $path && length $path;
     # join stringifies any objects, too, which is handy :-)
     $path = join( "/", ( $path eq '/' ? "" : $path ), @_ ) if @_;
     my $cpath = $path = File::Spec->canonpath($path); # ugh, but probably worth it
@@ -62,6 +64,9 @@ sub path {
 
 
 sub new { shift; path(@_) }
+
+
+sub cwd { shift; path(Cwd::getcwd) }
 
 
 sub rootdir { path( File::Spec->rootdir ) }
@@ -179,7 +184,9 @@ sub children {
 
 
 # XXX do recursively for directories?
-sub copy { File::Copy::copy( $_[0]->[PATH], "$_[1]" ) or die "Copy failed: $!" }
+sub copy {
+    File::Copy::copy( $_[0]->[PATH], "$_[1]" ) or Carp::croak("Copy failed: $!");
+}
 
 
 sub dirname {
@@ -322,7 +329,7 @@ sub parent {
             return path( $self->[PATH] . "/.." );
         }
         else {
-            return path( $self->[VOL] . $self->[DIR] );
+            return path( _non_empty( $self->[VOL] . $self->[DIR] ) );
         }
     }
     elsif ( length $self->[DIR] ) {
@@ -336,8 +343,13 @@ sub parent {
         }
     }
     else {
-        return path( $self->[VOL] );
+        return path( _non_empty( $self->[VOL] ) );
     }
+}
+
+sub _non_empty {
+    my ($string) = shift;
+    return ( ( defined($string) && length($string) ) ? $string : "." );
 }
 
 
@@ -348,14 +360,12 @@ sub realpath { return path( Cwd::realpath( $_[0]->[PATH] ) ) }
 sub relative { path( File::Spec->abs2rel( $_[0]->[PATH], $_[1] ) ) }
 
 
-sub remove {
-    my ( $self, $opts ) = @_;
-    if ( -d $self->[PATH] ) {
-        return File::Path::remove_tree( $self->[PATH], ref($opts) eq 'HASH' ? $opts : () );
-    }
-    else {
-        return ( -e $self->[PATH] ) ? unlink $self->[PATH] : 1;
-    }
+sub remove { return -e $_[0]->[PATH] ? unlink $_[0]->[PATH] : 0 }
+
+
+sub remove_tree {
+    return unless -e $_[0]->[PATH];
+    File::Path::remove_tree( $_[0]->[PATH], ref $_[1] eq 'HASH' ? $_[1] : () );
 }
 
 
@@ -475,7 +485,7 @@ Path::Tiny - File path utility
 
 =head1 VERSION
 
-version 0.011
+version 0.012
 
 =head1 SYNOPSIS
 
@@ -538,18 +548,24 @@ The C<*_utf8> methods (C<slurp_utf8>, C<lines_utf8>, etc.) operate in raw
 mode without CRLF translation.  Installing L<Unicode::UTF8> 0.58 or later
 will speed up several of them and is highly recommended.
 
+It uses L<autodie> internally, so most failures will be thrown as exceptions.
+
 =head1 CONSTRUCTORS
 
 =head2 path
 
     $path = path("foo/bar");
-    $path = path("/tmp/file.txt");
-    $path = path(); # like path(".")
+    $path = path("/tmp", "file.txt"); # list
+    $path = path(".");                # cwd
 
 Constructs a C<Path::Tiny> object.  It doesn't matter if you give a file or
 directory path.  It's still up to you to call directory-like methods only on
 directories and file-like methods only on files.  This function is exported
 automatically by default.
+
+The first argument must be defined and have non-zero length or an exception
+will be thrown.  This prevents subtle, dangerous errors with code like
+C<< path( maybe_undef() )->remove_tree >>.
 
 =head2 new
 
@@ -557,6 +573,13 @@ automatically by default.
 
 This is just like C<path>, but with method call overhead.  (Why would you
 do that?)
+
+=head2 cwd
+
+    $path = Path::Tiny->cwd; # path( Cwd::getcwd )
+
+Gives you the absolute path to the current directory as a C<Path::Tiny> object.
+This is slightly faster than C<< path(".")->absolute >>.
 
 =head2 rootdir
 
@@ -833,18 +856,28 @@ C<< File::Spec->abs2rel() >>.
 
 =head2 remove
 
+    path("foo.txt")->remove;
+
+B<Note: as of 0.012, remove only works on files>.
+
+This is just like C<unlink>, except if the path does not exist, it returns
+false rather than throwing an exception.
+
+=head2 remove_tree
+
     # directory
     path("foo/bar/baz")->remove;
     path("foo/bar/baz")->remove( \%options );
 
-    # file
-    path("foo.txt")->remove;
+Like calling C<remove_tree> from L<File::Path>.  An optional hash reference
+is passed through to C<remove_tree>.
 
-For directories, this is like like calling C<remove_tree> from L<File::Path>.  An
-optional hash reference is passed through to C<remove_tree>.
+If the path does not exist, it returns false.
 
-For files, the file is unlinked if it exists.  Unlike C<unlink>, if the file
-does not exist, this silently does nothing and returns a true value anyway.
+If you want to remove a directory only if it is empty, use the built-in
+C<rmdir> function instead.
+
+    rmdir path("foo/bar/baz/");
 
 =head2 slurp
 

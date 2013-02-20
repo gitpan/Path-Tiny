@@ -14,6 +14,7 @@ CRLF
 Stringifying
 canonpath
 codepoints
+cwd
 dirname
 lstat
 mkpath

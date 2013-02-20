@@ -31,6 +31,7 @@ my %WriteMakefileArgs = (
   "LICENSE" => "apache",
   "NAME" => "Path::Tiny",
   "PREREQ_PM" => {
+    "Carp" => 0,
     "Cwd" => 0,
     "Exporter" => "5.57",
     "Fcntl" => 0,
@@ -45,7 +46,7 @@ my %WriteMakefileArgs = (
     "strict" => 0,
     "warnings" => 0
   },
-  "VERSION" => "0.011",
+  "VERSION" => "0.012",
   "test" => {
     "TESTS" => "t/*.t"
   }

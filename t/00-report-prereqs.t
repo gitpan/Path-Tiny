@@ -10,6 +10,7 @@ use File::Spec::Functions;
 use List::Util qw/max/;
 
 my @modules = qw(
+  Carp
   Cwd
   Devel::Hide
   Exporter

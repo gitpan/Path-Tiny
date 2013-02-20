@@ -2,7 +2,7 @@ NAME
     Path::Tiny - File path utility
 
 VERSION
-    version 0.011
+    version 0.012
 
 SYNOPSIS
       use Path::Tiny;
@@ -63,22 +63,35 @@ DESCRIPTION
     mode without CRLF translation. Installing Unicode::UTF8 0.58 or later
     will speed up several of them and is highly recommended.
 
+    It uses autodie internally, so most failures will be thrown as
+    exceptions.
+
 CONSTRUCTORS
   path
         $path = path("foo/bar");
-        $path = path("/tmp/file.txt");
-        $path = path(); # like path(".")
+        $path = path("/tmp", "file.txt"); # list
+        $path = path(".");                # cwd
 
     Constructs a "Path::Tiny" object. It doesn't matter if you give a file
     or directory path. It's still up to you to call directory-like methods
     only on directories and file-like methods only on files. This function
     is exported automatically by default.
 
+    The first argument must be defined and have non-zero length or an
+    exception will be thrown. This prevents subtle, dangerous errors with
+    code like "path( maybe_undef() )->remove_tree".
+
   new
         $path = Path::Tiny->new("foo/bar");
 
     This is just like "path", but with method call overhead. (Why would you
     do that?)
+
+  cwd
+        $path = Path::Tiny->cwd; # path( Cwd::getcwd )
+
+    Gives you the absolute path to the current directory as a "Path::Tiny"
+    object. This is slightly faster than "path(".")->absolute".
 
   rootdir
         $path = Path::Tiny->rootdir; # /
@@ -326,20 +339,27 @@ METHODS
     trickiness of this, it's a thin wrapper around "File::Spec->abs2rel()".
 
   remove
+        path("foo.txt")->remove;
+
+    Note: as of 0.012, remove only works on files.
+
+    This is just like "unlink", except if the path does not exist, it
+    returns false rather than throwing an exception.
+
+  remove_tree
         # directory
         path("foo/bar/baz")->remove;
         path("foo/bar/baz")->remove( \%options );
 
-        # file
-        path("foo.txt")->remove;
+    Like calling "remove_tree" from File::Path. An optional hash reference
+    is passed through to "remove_tree".
 
-    For directories, this is like like calling "remove_tree" from
-    File::Path. An optional hash reference is passed through to
-    "remove_tree".
+    If the path does not exist, it returns false.
 
-    For files, the file is unlinked if it exists. Unlike "unlink", if the
-    file does not exist, this silently does nothing and returns a true value
-    anyway.
+    If you want to remove a directory only if it is empty, use the built-in
+    "rmdir" function instead.
+
+        rmdir path("foo/bar/baz/");
 
   slurp
         $data = path("foo.txt")->slurp;
