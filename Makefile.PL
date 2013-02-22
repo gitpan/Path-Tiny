@@ -17,6 +17,7 @@ my %WriteMakefileArgs = (
     "File::Find" => 0,
     "File::Spec::Functions" => 0,
     "File::Spec::Unix" => 0,
+    "File::pushd" => 0,
     "List::Util" => 0,
     "Test::Deep" => 0,
     "Test::Fatal" => 0,
@@ -40,13 +41,13 @@ my %WriteMakefileArgs = (
     "File::Spec" => "3.40",
     "File::Temp" => "0.18",
     "File::stat" => 0,
-    "autodie" => "2.00",
+    "autodie" => "2.14",
     "constant" => 0,
     "overload" => 0,
     "strict" => 0,
     "warnings" => 0
   },
-  "VERSION" => "0.012",
+  "VERSION" => "0.013",
   "test" => {
     "TESTS" => "t/*.t"
   }

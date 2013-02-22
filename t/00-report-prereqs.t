@@ -23,6 +23,7 @@ my @modules = qw(
   File::Spec::Functions
   File::Spec::Unix
   File::Temp
+  File::pushd
   File::stat
   List::Util
   Test::Deep

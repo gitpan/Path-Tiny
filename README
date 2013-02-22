@@ -2,7 +2,7 @@ NAME
     Path::Tiny - File path utility
 
 VERSION
-    version 0.012
+    version 0.013
 
 SYNOPSIS
       use Path::Tiny;
@@ -115,6 +115,9 @@ CONSTRUCTORS
 
         $temp = Path::Tiny->tempfile( "customXXXXXXXX" );             # ok
         $temp = Path::Tiny->tempfile( TEMPLATE => "customXXXXXXXX" ); # ok
+
+    The tempfile path object will normalized to have an absolute path, even
+    if created in a relative directory using "DIR".
 
   tempdir
         $temp = Path::Tiny->tempdir( @options );
@@ -288,7 +291,9 @@ METHODS
         path("foo/bar/baz")->mkpath( \%options );
 
     Like calling "make_path" from File::Path. An optional hash reference is
-    passed through to "make_path".
+    passed through to "make_path". Errors will be trapped and an exception
+    thrown. Returns the list of directories created or an empty list if the
+    directories already exist, just like "make_path".
 
   move
         path("foo.txt")->move("bar.txt");
@@ -348,13 +353,14 @@ METHODS
 
   remove_tree
         # directory
-        path("foo/bar/baz")->remove;
-        path("foo/bar/baz")->remove( \%options );
+        path("foo/bar/baz")->remove_tree;
+        path("foo/bar/baz")->remove_tree( \%options );
+        path("foo/bar/baz")->remove_tree( { safe => 0 } ); # force remove
 
-    Like calling "remove_tree" from File::Path. An optional hash reference
-    is passed through to "remove_tree".
-
-    If the path does not exist, it returns false.
+    Like calling "remove_tree" from File::Path, but defaults to "safe" mode.
+    An optional hash reference is passed through to "remove_tree". Errors
+    will be trapped and an exception thrown. Returns the number of
+    directories deleted, just like "remove_tree".
 
     If you want to remove a directory only if it is empty, use the built-in
     "rmdir" function instead.

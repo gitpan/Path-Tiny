@@ -4,10 +4,10 @@ use warnings;
 
 package Path::Tiny;
 # ABSTRACT: File path utility
-our $VERSION = '0.012'; # VERSION
+our $VERSION = '0.013'; # VERSION
 
 # Dependencies
-use autodie 2.00;
+use autodie 2.14; # autodie::skip support
 use Exporter 5.57   (qw/import/);
 use File::Spec 3.40 ();
 use File::Temp 0.18 ();
@@ -39,7 +39,9 @@ my $TID = 0; # for thread safe atomic writes
 
 sub CLONE { $TID = threads->tid }; # if cloning, threads should be loaded
 
-my $HAS_UU;                        # has Unicode::UTF8; lazily populated
+sub DOES { return $_[1] eq 'autodie::skip' } # report errors like croak
+
+my $HAS_UU;                                  # has Unicode::UTF8; lazily populated
 
 sub _check_UU {
     eval { require Unicode::UTF8; Unicode::UTF8->VERSION(0.58); 1 };
@@ -79,7 +81,7 @@ sub tempfile {
     $args->{TEMPLATE} = $maybe_template->[0] if @$maybe_template;
     my $temp = File::Temp->new( TMPDIR => 1, %$args );
     close $temp;
-    my $self = path($temp);
+    my $self = path($temp)->absolute;
     $self->[TEMP] = $temp; # keep object alive while we are
     return $self;
 }
@@ -90,7 +92,7 @@ sub tempdir {
     my ( $maybe_template, $args ) = _parse_file_temp_args(@_);
     # File::Temp->newdir demands leading template
     my $temp = File::Temp->newdir( @$maybe_template, TMPDIR => 1, %$args );
-    my $self = path($temp);
+    my $self = path($temp)->absolute;
     $self->[TEMP] = $temp; # keep object alive while we are
     return $self;
 }
@@ -185,7 +187,7 @@ sub children {
 
 # XXX do recursively for directories?
 sub copy {
-    File::Copy::copy( $_[0]->[PATH], "$_[1]" ) or Carp::croak("Copy failed: $!");
+    File::Copy::copy( $_[0]->[PATH], "$_[1]" ) or Carp::croak("copy failed: $!");
 }
 
 
@@ -291,7 +293,16 @@ sub lstat { File::stat::lstat( $_[0]->[PATH] ) }
 
 
 sub mkpath {
-    File::Path::make_path( $_[0]->[PATH], ref $_[1] eq 'HASH' ? $_[1] : () );
+    my ( $self, $args ) = @_;
+    $args = {} unless ref $args eq 'HASH';
+    my $err;
+    $args->{err} = \$err unless defined $args->{err};
+    my @dirs = File::Path::make_path( $self->[PATH], $args );
+    if ( $err && @$err ) {
+        my ( $file, $message ) = %{ $err->[0] };
+        Carp::croak("mkpath failed for $file: $message");
+    }
+    return @dirs;
 }
 
 
@@ -364,8 +375,18 @@ sub remove { return -e $_[0]->[PATH] ? unlink $_[0]->[PATH] : 0 }
 
 
 sub remove_tree {
-    return unless -e $_[0]->[PATH];
-    File::Path::remove_tree( $_[0]->[PATH], ref $_[1] eq 'HASH' ? $_[1] : () );
+    my ( $self, $args ) = @_;
+    return 0 unless -e $self->[PATH];
+    $args = {} unless ref $args eq 'HASH';
+    my $err;
+    $args->{err}  = \$err unless defined $args->{err};
+    $args->{safe} = 1     unless defined $args->{safe};
+    my $count = File::Path::remove_tree( $self->[PATH], $args );
+    if ( $err && @$err ) {
+        my ( $file, $message ) = %{ $err->[0] };
+        Carp::croak("remove_tree failed for $file: $message");
+    }
+    return $count;
 }
 
 
@@ -485,7 +506,7 @@ Path::Tiny - File path utility
 
 =head1 VERSION
 
-version 0.012
+version 0.013
 
 =head1 SYNOPSIS
 
@@ -605,6 +626,9 @@ C<TEMPLATE> option and does the right thing.
 
     $temp = Path::Tiny->tempfile( "customXXXXXXXX" );             # ok
     $temp = Path::Tiny->tempfile( TEMPLATE => "customXXXXXXXX" ); # ok
+
+The tempfile path object will normalized to have an absolute path, even if
+created in a relative directory using C<DIR>.
 
 =head2 tempdir
 
@@ -798,7 +822,9 @@ Like calling C<lstat> from L<File::stat>.
     path("foo/bar/baz")->mkpath( \%options );
 
 Like calling C<make_path> from L<File::Path>.  An optional hash reference
-is passed through to C<make_path>.
+is passed through to C<make_path>.  Errors will be trapped and an exception
+thrown.  Returns the list of directories created or an empty list if
+the directories already exist, just like C<make_path>.
 
 =head2 move
 
@@ -866,13 +892,14 @@ false rather than throwing an exception.
 =head2 remove_tree
 
     # directory
-    path("foo/bar/baz")->remove;
-    path("foo/bar/baz")->remove( \%options );
+    path("foo/bar/baz")->remove_tree;
+    path("foo/bar/baz")->remove_tree( \%options );
+    path("foo/bar/baz")->remove_tree( { safe => 0 } ); # force remove
 
-Like calling C<remove_tree> from L<File::Path>.  An optional hash reference
-is passed through to C<remove_tree>.
-
-If the path does not exist, it returns false.
+Like calling C<remove_tree> from L<File::Path>, but defaults to C<safe> mode.
+An optional hash reference is passed through to C<remove_tree>.  Errors will be
+trapped and an exception thrown.  Returns the number of directories deleted,
+just like C<remove_tree>.
 
 If you want to remove a directory only if it is empty, use the built-in
 C<rmdir> function instead.
@@ -969,6 +996,7 @@ usually is the empty string on Unix-like operating systems.
 
 =for Pod::Coverage openr_utf8 opena_utf8 openw_utf8 openrw_utf8
 openr_raw opena_raw openw_raw openrw_raw
+DOES
 
 =head1 CAVEATS
 
