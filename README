@@ -2,7 +2,7 @@ NAME
     Path::Tiny - File path utility
 
 VERSION
-    version 0.014
+    version 0.015
 
 SYNOPSIS
       use Path::Tiny;
@@ -439,11 +439,16 @@ METHODS
     Like the Unix "touch" utility. Creates the file if it doesn't exist, or
     else changes the modification and access times to the current time.
 
+    Returns the path object so it can be easily chained with spew:
+
+        path("foo.txt")->touch->spew( $content );
+
   touchpath
         path("bar/baz/foo.txt")->touchpath;
 
     Combines "mkpath" and "touch". Creates the parent directory if it
-    doesn't exist, before touching the file.
+    doesn't exist, before touching the file. Returns the path object like
+    "touch" does.
 
   volume
         $vol = path("/tmp/foo.txt")->volume;

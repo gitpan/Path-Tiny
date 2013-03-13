@@ -4,7 +4,7 @@ use warnings;
 
 package Path::Tiny;
 # ABSTRACT: File path utility
-our $VERSION = '0.014'; # VERSION
+our $VERSION = '0.015'; # VERSION
 
 # Dependencies
 use autodie 2.14; # autodie::skip support
@@ -333,7 +333,7 @@ while ( my ( $k, $v ) = each %opens ) {
 # XXX this is ugly and coverage is incomplete.  I think it's there for windows
 # so need to check coverage there and compare
 sub parent {
-    my ($self, $level) = @_;
+    my ( $self, $level ) = @_;
     $level = 1 unless defined $level && $level > 0;
     $self->_splitpath unless defined $self->[FILE];
     my $parent;
@@ -477,6 +477,7 @@ sub touch {
     else {
         close $self->openw;
     }
+    return $self;
 }
 
 
@@ -509,7 +510,7 @@ Path::Tiny - File path utility
 
 =head1 VERSION
 
-version 0.014
+version 0.015
 
 =head1 SYNOPSIS
 
@@ -986,12 +987,16 @@ returns the path standardized with Unix-style C</> directory separators.
 Like the Unix C<touch> utility.  Creates the file if it doesn't exist, or else
 changes the modification and access times to the current time.
 
+Returns the path object so it can be easily chained with spew:
+
+    path("foo.txt")->touch->spew( $content );
+
 =head2 touchpath
 
     path("bar/baz/foo.txt")->touchpath;
 
 Combines C<mkpath> and C<touch>.  Creates the parent directory if it doesn't exist,
-before touching the file.
+before touching the file.  Returns the path object like C<touch> does.
 
 =head2 volume
 
