@@ -2,7 +2,7 @@ NAME
     Path::Tiny - File path utility
 
 VERSION
-    version 0.015
+    version 0.016
 
 SYNOPSIS
       use Path::Tiny;
@@ -239,16 +239,26 @@ METHODS
     Boolean for whether the path appears relative or not.
 
   iterator
+        $iter = path("/tmp")->iterator( \%options );
+
+    Returns a code reference that walks a directory lazily. Each invocation
+    returns a "Path::Tiny" object or undef when the iterator is exhausted.
+
         $iter = path("/tmp")->iterator;
         while ( $path = $iter->() ) {
             ...
         }
 
-    Returns a code reference that walks a directory lazily. Each invocation
-    returns a "Path::Tiny" object or undef when the iterator is exhausted.
+    The current and parent directory entries ("." and "..") will not be
+    included.
 
-    This iterator is not recursive. For recursive iteration, use
-    Path::Iterator::Rule instead.
+    If the "recurse" option is true, the iterator will walk the directory
+    recursively, breadth-first. If the "follow_symlinks" option is also
+    true, directory links will be followed recursively. There is no
+    protection against loops when following links.
+
+    For a more powerful, recursive iterator with built-in loop avoidance,
+    see Path::Iterator::Rule.
 
   lines
         @contents = path("/tmp/foo.txt")->lines;
@@ -497,28 +507,18 @@ TYPE CONSTRAINTS AND COERCION
     MooseX::Types::Path::Tiny.
 
 SEE ALSO
-    *   File::Fu
+    These are other file/path utilities, which may offer a different feature
+    set than "Path::Tiny".
 
-    *   IO::All
+    * File::Fu * IO::All * Path::Class
 
-    *   Path::Class
+    These iterators may be slightly faster than the recursive iterator in
+    "Path::Tiny":
 
-    Probably others. Let me know if you want me to add a module to the list.
+    * Path::Iterator::Rule * File::Next
 
-BENCHMARKING
-    I benchmarked a naive file-finding task: finding all "*.pm" files in
-    @INC. I tested Path::Iterator::Rule and different subclasses of it that
-    do file manipulations using file path helpers Path::Class, IO::All,
-    File::Fu and "Path::Tiny".
-
-        Path::Iterator::Rule    0.474s (no objects)
-        Path::Tiny::Rule        0.938s (not on CPAN)
-        IO::All::Rule           1.355s
-        File::Fu::Rule          1.437s (not on CPAN)
-        Path::Class::Rule       4.673s
-
-    This benchmark heavily stressed object creation and determination of a
-    file's basename.
+    There are probably comparable, non-Tiny tools. Let me know if you want
+    me to add a module to the list.
 
 SUPPORT
   Bugs / Feature Requests

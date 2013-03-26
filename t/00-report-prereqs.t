@@ -11,6 +11,7 @@ use List::Util qw/max/;
 
 my @modules = qw(
   Carp
+  Config
   Cwd
   Devel::Hide
   Exporter
@@ -30,7 +31,7 @@ my @modules = qw(
   Test::Fatal
   Test::More
   Unicode::UTF8
-  autodie
+  autodie::exception
   constant
   open
   overload

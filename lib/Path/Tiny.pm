@@ -4,19 +4,13 @@ use warnings;
 
 package Path::Tiny;
 # ABSTRACT: File path utility
-our $VERSION = '0.015'; # VERSION
+our $VERSION = '0.016'; # VERSION
 
 # Dependencies
-use autodie 2.14; # autodie::skip support
+use autodie::exception 2.14; # autodie::skip support
 use Exporter 5.57   (qw/import/);
 use File::Spec 3.40 ();
-use File::Temp 0.18 ();
 use Carp       ();
-use Cwd        ();
-use Fcntl      (qw/:flock SEEK_END/);
-use File::Copy ();
-use File::stat ();
-{ no warnings; use File::Path 2.07 (); } # avoid "2.07_02 isn't numeric"
 
 our @EXPORT = qw/path/;
 
@@ -47,6 +41,18 @@ sub _check_UU {
     eval { require Unicode::UTF8; Unicode::UTF8->VERSION(0.58); 1 };
 }
 
+# we do our own autodie::exceptions to avoid wrapping built-in functions
+sub _throw {
+    my ( $function, $args ) = @_;
+    die autodie::exception->new(
+        function => "CORE::$function",
+        args     => $args,
+        errno    => $!,
+        context  => 'scalar',
+        return   => undef,
+    );
+}
+
 #--------------------------------------------------------------------------#
 # Constructors
 #--------------------------------------------------------------------------#
@@ -68,7 +74,10 @@ sub path {
 sub new { shift; path(@_) }
 
 
-sub cwd { shift; path(Cwd::getcwd) }
+sub cwd {
+    require Cwd;
+    return path(Cwd::getcwd());
+}
 
 
 sub rootdir { path( File::Spec->rootdir ) }
@@ -79,6 +88,8 @@ sub tempfile {
     my ( $maybe_template, $args ) = _parse_file_temp_args(@_);
     # File::Temp->new demands TEMPLATE
     $args->{TEMPLATE} = $maybe_template->[0] if @$maybe_template;
+
+    require File::Temp;
     my $temp = File::Temp->new( TMPDIR => 1, %$args );
     close $temp;
     my $self = path($temp)->absolute;
@@ -90,7 +101,9 @@ sub tempfile {
 sub tempdir {
     my $class = shift;
     my ( $maybe_template, $args ) = _parse_file_temp_args(@_);
+
     # File::Temp->newdir demands leading template
+    require File::Temp;
     my $temp = File::Temp->newdir( @$maybe_template, TMPDIR => 1, %$args );
     my $self = path($temp)->absolute;
     $self->[TEMP] = $temp; # keep object alive while we are
@@ -127,7 +140,9 @@ sub _splitpath {
 sub absolute {
     my ( $self, $base ) = @_;
     return $self if $self->is_absolute;
-    return path( join "/", ( defined($base) ? $base : Cwd::getcwd ), $_[0]->[PATH] );
+
+    require Cwd;
+    return path( join "/", ( defined($base) ? $base : Cwd::getcwd() ), $_[0]->[PATH] );
 }
 
 
@@ -137,10 +152,17 @@ sub append {
     my $binmode = $args->{binmode};
     $binmode = ( ( caller(0) )[10] || {} )->{'open>'} unless defined $binmode;
     my $fh = $self->filehandle( ">>", $binmode );
-    flock( $fh, LOCK_EX );
-    seek( $fh, 0, SEEK_END ); # ensure SEEK_END after flock
+
+    require Fcntl;
+    flock( $fh, Fcntl::LOCK_EX() ) or _throw( 'flock', [ $fh, Fcntl::LOCK_EX() ] );
+
+    # Ensure we're at the end after the lock
+    seek( $fh, 0, Fcntl::SEEK_END() ) or _throw( 'seek', [ $fh, 0, Fcntl::SEEK_END() ] );
+
     print {$fh} map { ref eq 'ARRAY' ? @$_ : $_ } @data;
-    close $fh;                # force immediate flush
+
+    # For immediate flush
+    close $fh or _throw( 'close', [$fh] );
 }
 
 
@@ -179,7 +201,9 @@ sub child {
 # XXX take a match parameter?  qr or coderef?
 sub children {
     my ($self) = @_;
-    opendir my $dh, $self->[PATH];
+    my $dh;
+    opendir $dh, $self->[PATH] or _throw( 'opendir', [ $dh, $self->[PATH] ] );
+
     return
       map { path( $self->[PATH] . "/$_" ) } grep { $_ ne '.' && $_ ne '..' } readdir $dh;
 }
@@ -187,6 +211,7 @@ sub children {
 
 # XXX do recursively for directories?
 sub copy {
+    require File::Copy;
     File::Copy::copy( $_[0]->[PATH], "$_[1]" ) or Carp::croak("copy failed: $!");
 }
 
@@ -205,10 +230,14 @@ sub exists { -e $_[0]->[PATH] }
 # like ":unix" actually stop perlio/crlf from being added
 
 sub filehandle {
-    my ( $self, $mode, $binmode ) = @_;
-    $mode    = "<" unless defined $mode;
-    $binmode = ""  unless defined $binmode;
-    open my $fh, "$mode$binmode", $self->[PATH];
+    my ( $self, $opentype, $binmode ) = @_;
+    $opentype = "<" unless defined $opentype;
+    $binmode  = ""  unless defined $binmode;
+
+    my $mode = $opentype . $binmode;
+    my $fh;
+    open $fh, $mode, $self->[PATH] or _throw( 'open', [ $fh, $mode, $self->[PATH] ] );
+
     return $fh;
 }
 
@@ -226,15 +255,26 @@ sub is_relative { substr( $_[0]->dirname, 0, 1 ) ne '/' }
 
 
 sub iterator {
-    my ($self) = @_;
-    opendir( my $dh, $self->[PATH] );
+    my ( $self, $args ) = @_;
+    my @dirs = $self;
+    my $current;
     return sub {
-        return unless $dh;
         my $next;
-        while ( defined( $next = readdir $dh ) ) {
-            return $self->child($next) if $next ne '.' && $next ne '..';
+        while (@dirs) {
+            if ( ref $dirs[0] eq 'Path::Tiny' ) {
+                $current = $dirs[0];
+                opendir( my $dh, $current->[PATH] );
+                $dirs[0] = $dh;
+            }
+            while ( defined( $next = readdir $dirs[0] ) ) {
+                next if $next eq '.' || $next eq '..';
+                my $path = $current->child($next);
+                push @dirs, $path
+                  if $args->{recurse} && -d $path && !( !$args->{follow_symlinks} && -l $path );
+                return $path;
+            }
+            shift @dirs;
         }
-        undef $dh;
         return;
     };
 }
@@ -246,7 +286,8 @@ sub lines {
     my $binmode = $args->{binmode};
     $binmode = ( ( caller(0) )[10] || {} )->{'open<'} unless defined $binmode;
     my $fh = $self->filehandle( "<", $binmode );
-    flock( $fh, LOCK_SH );
+    require Fcntl;
+    flock( $fh, Fcntl::LOCK_SH() ) or _throw( 'flock', [ $fh, Fcntl::LOCK_SH() ] );
     my $chomp = $args->{chomp};
     my @lines;
     # XXX more efficient to read @lines then chomp(@lines) vs map?
@@ -289,7 +330,11 @@ sub lines_utf8 {
 }
 
 
-sub lstat { File::stat::lstat( $_[0]->[PATH] ) }
+sub lstat {
+    my $self = shift;
+    require File::stat;
+    return File::stat::lstat( $self->[PATH] ) || _throw( 'lstat', [ $self->[PATH] ] );
+}
 
 
 sub mkpath {
@@ -297,6 +342,7 @@ sub mkpath {
     $args = {} unless ref $args eq 'HASH';
     my $err;
     $args->{err} = \$err unless defined $args->{err};
+    require File::Path;
     my @dirs = File::Path::make_path( $self->[PATH], $args );
     if ( $err && @$err ) {
         my ( $file, $message ) = %{ $err->[0] };
@@ -306,7 +352,11 @@ sub mkpath {
 }
 
 
-sub move { rename $_[0]->[PATH], $_[1] }
+sub move {
+    my ( $self, $dst ) = @_;
+
+    return rename( $self->[PATH], $dst ) || _throw( 'rename', [ $self->[PATH], $dst ] );
+}
 
 
 my %opens = (
@@ -367,14 +417,23 @@ sub _non_empty {
 }
 
 
-sub realpath { return path( Cwd::realpath( $_[0]->[PATH] ) ) }
+sub realpath {
+    require Cwd;
+    return path( Cwd::realpath( $_[0]->[PATH] ) );
+}
 
 
 # Easy to get wrong, so wash it through File::Spec (sigh)
 sub relative { path( File::Spec->abs2rel( $_[0]->[PATH], $_[1] ) ) }
 
 
-sub remove { return -e $_[0]->[PATH] ? unlink $_[0]->[PATH] : 0 }
+sub remove {
+    my $self = shift;
+
+    return 0 if !-e $self->[PATH];
+
+    return unlink $self->[PATH] || _throw( 'unlink', [ $self->[PATH] ] );
+}
 
 
 sub remove_tree {
@@ -384,6 +443,7 @@ sub remove_tree {
     my $err;
     $args->{err}  = \$err unless defined $args->{err};
     $args->{safe} = 1     unless defined $args->{safe};
+    require File::Path;
     my $count = File::Path::remove_tree( $self->[PATH], $args );
     if ( $err && @$err ) {
         my ( $file, $message ) = %{ $err->[0] };
@@ -399,7 +459,8 @@ sub slurp {
     my $binmode = $args->{binmode};
     $binmode = ( ( caller(0) )[10] || {} )->{'open<'} unless defined $binmode;
     my $fh = $self->filehandle( "<", $binmode );
-    flock( $fh, LOCK_SH );
+    require Fcntl;
+    flock( $fh, Fcntl::LOCK_SH() ) or _throw( 'flock', [ $fh, Fcntl::LOCK_SH() ] );
     if ( ( defined($binmode) ? $binmode : "" ) eq ":unix"
         and my $size = -s $fh )
     {
@@ -436,13 +497,14 @@ sub spew {
     $binmode = ( ( caller(0) )[10] || {} )->{'open>'} unless defined $binmode;
     my $temp = path( $self->[PATH] . $TID . $$ );
     my $fh = $temp->filehandle( ">", $binmode );
-    flock( $fh, LOCK_EX );
-    seek( $fh, 0, 0 );
-    truncate( $fh, 0 );
+    require Fcntl;
+    flock( $fh, Fcntl::LOCK_EX() ) or _throw( 'flock', [ $fh, Fcntl::LOCK_EX() ] );
+    seek( $fh, 0, Fcntl::SEEK_SET() ) or _throw( 'seek', [ $fh, 0, Fcntl::SEEK_SET() ] );
+    truncate( $fh, 0 ) or _throw( 'truncate', [ $fh, 0 ] );
     print {$fh} map { ref eq 'ARRAY' ? @$_ : $_ } @data;
-    flock( $fh, LOCK_UN );
-    close $fh;
-    $temp->move( $self->[PATH] );
+    flock( $fh, Fcntl::LOCK_UN() ) or _throw( 'flock', [ $fh, Fcntl::LOCK_UN() ] );
+    close $fh or _throw( 'close', [$fh] );
+    return $temp->move( $self->[PATH] );
 }
 
 
@@ -462,7 +524,11 @@ sub spew_utf8 {
 
 
 # XXX break out individual stat() components as subs?
-sub stat { File::stat::stat( $_[0]->[PATH] ) }
+sub stat {
+    my $self = shift;
+    require File::stat;
+    return File::stat::stat( $self->[PATH] ) || _throw( 'stat', [ $self->[PATH] ] );
+}
 
 
 sub stringify { $_[0]->[PATH] }
@@ -472,10 +538,11 @@ sub touch {
     my ($self) = @_;
     if ( -e $self->[PATH] ) {
         my $now = time();
-        utime $now, $now, $self->[PATH];
+        utime $now, $now, $self->[PATH] or _throw( 'utime', [ $now, $now, $self->[PATH] ] );
     }
     else {
-        close $self->openw;
+        my $fh = $self->openw;
+        close $fh or _throw( 'close', [$fh] );
     }
     return $self;
 }
@@ -510,7 +577,7 @@ Path::Tiny - File path utility
 
 =head1 VERSION
 
-version 0.015
+version 0.016
 
 =head1 SYNOPSIS
 
@@ -769,16 +836,26 @@ Boolean for whether the path appears relative or not.
 
 =head2 iterator
 
+    $iter = path("/tmp")->iterator( \%options );
+
+Returns a code reference that walks a directory lazily.  Each invocation
+returns a C<Path::Tiny> object or undef when the iterator is exhausted.
+
     $iter = path("/tmp")->iterator;
     while ( $path = $iter->() ) {
         ...
     }
 
-Returns a code reference that walks a directory lazily.  Each invocation
-returns a C<Path::Tiny> object or undef when the iterator is exhausted.
+The current and parent directory entries ("." and "..") will not
+be included.
 
-This iterator is B<not> recursive.  For recursive iteration, use
-L<Path::Iterator::Rule> instead.
+If the C<recurse> option is true, the iterator will walk the directory
+recursively, breadth-first.  If the C<follow_symlinks> option is also true,
+directory links will be followed recursively.  There is no protection against
+loops when following links.
+
+For a more powerful, recursive iterator with built-in loop avoidance, see
+L<Path::Iterator::Rule>.
 
 =head2 lines
 
@@ -1054,39 +1131,21 @@ L<MooseX::Types::Path::Tiny>.
 
 =head1 SEE ALSO
 
-=over 4
+These are other file/path utilities, which may offer a different feature
+set than C<Path::Tiny>.
 
-=item *
+* L<File::Fu>
+* L<IO::All>
+* L<Path::Class>
 
-L<File::Fu>
+These iterators may be slightly faster than the recursive iterator in
+C<Path::Tiny>:
 
-=item *
+* L<Path::Iterator::Rule>
+* L<File::Next>
 
-L<IO::All>
-
-=item *
-
-L<Path::Class>
-
-=back
-
-Probably others.  Let me know if you want me to add a module to the list.
-
-=head1 BENCHMARKING
-
-I benchmarked a naive file-finding task: finding all C<*.pm> files in C<@INC>.
-I tested L<Path::Iterator::Rule> and different subclasses of it that do file
-manipulations using file path helpers L<Path::Class>, L<IO::All>, L<File::Fu>
-and C<Path::Tiny>.
-
-    Path::Iterator::Rule    0.474s (no objects)
-    Path::Tiny::Rule        0.938s (not on CPAN)
-    IO::All::Rule           1.355s
-    File::Fu::Rule          1.437s (not on CPAN)
-    Path::Class::Rule       4.673s
-
-This benchmark heavily stressed object creation and determination of
-a file's basename.
+There are probably comparable, non-Tiny tools.  Let me know if you want me to
+add a module to the list.
 
 =for :stopwords cpan testmatrix url annocpan anno bugtracker rt cpants kwalitee diff irc mailto metadata placeholders metacpan
 

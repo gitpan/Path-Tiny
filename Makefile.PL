@@ -12,6 +12,7 @@ my %WriteMakefileArgs = (
   "ABSTRACT" => "File path utility",
   "AUTHOR" => "David Golden <dagolden\@cpan.org>",
   "BUILD_REQUIRES" => {
+    "Config" => 0,
     "Devel::Hide" => 0,
     "ExtUtils::MakeMaker" => 0,
     "File::Find" => 0,
@@ -41,13 +42,13 @@ my %WriteMakefileArgs = (
     "File::Spec" => "3.40",
     "File::Temp" => "0.18",
     "File::stat" => 0,
-    "autodie" => "2.14",
+    "autodie::exception" => "2.14",
     "constant" => 0,
     "overload" => 0,
     "strict" => 0,
     "warnings" => 0
   },
-  "VERSION" => "0.015",
+  "VERSION" => "0.016",
   "test" => {
     "TESTS" => "t/*.t"
   }
