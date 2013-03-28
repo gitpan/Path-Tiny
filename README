@@ -2,7 +2,7 @@ NAME
     Path::Tiny - File path utility
 
 VERSION
-    version 0.016
+    version 0.017
 
 SYNOPSIS
       use Path::Tiny;
@@ -71,6 +71,7 @@ CONSTRUCTORS
         $path = path("foo/bar");
         $path = path("/tmp", "file.txt"); # list
         $path = path(".");                # cwd
+        $path = path("~user/file.txt");   # tilde processing
 
     Constructs a "Path::Tiny" object. It doesn't matter if you give a file
     or directory path. It's still up to you to call directory-like methods
@@ -80,6 +81,12 @@ CONSTRUCTORS
     The first argument must be defined and have non-zero length or an
     exception will be thrown. This prevents subtle, dangerous errors with
     code like "path( maybe_undef() )->remove_tree".
+
+    If the first component of the path is a tilde ('~') then the component
+    will be replaced with the output of "glob('~')". If the first component
+    of the path is a tilde followed by a user name then the component will
+    be replaced with output of "glob('~username')". Behaviour for
+    non-existent users depends on the output of "glob" on the system.
 
   new
         $path = Path::Tiny->new("foo/bar");
@@ -538,11 +545,13 @@ AUTHOR
     David Golden <dagolden@cpan.org>
 
 CONTRIBUTORS
-    *   Chris 'BinGOs' Williams <chris@bingosnet.co.uk>
+    *   Chris Williams <bingos@cpan.org>
+
+    *   George Hartzell <hartzell@cpan.org>
 
     *   Karen Etheridge <ether@cpan.org>
 
-    *   Michael G. Schwern <schwern@pobox.com>
+    *   Michael G. Schwern <mschwern@cpan.org>
 
 COPYRIGHT AND LICENSE
     This software is Copyright (c) 2013 by David Golden.

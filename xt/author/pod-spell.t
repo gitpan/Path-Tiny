@@ -13,6 +13,7 @@ BENCHMARKING
 BinGOs
 CRLF
 Etheridge
+Hartzell
 Stringifying
 canonpath
 codepoints

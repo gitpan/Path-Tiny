@@ -1,5 +1,15 @@
 Revision history for Path-Tiny
 
+0.017     2013-03-28 16:49:15 America/New_York
+
+    [ADDED]
+
+    - path() constructor now glob-expands tildes (~)
+
+    [CHANGED]
+
+    - Improved options validation; invalid options now throw errors
+
 0.016     2013-03-26 14:59:36 America/New_York
 
     [ADDED]

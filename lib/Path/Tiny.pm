@@ -4,13 +4,13 @@ use warnings;
 
 package Path::Tiny;
 # ABSTRACT: File path utility
-our $VERSION = '0.016'; # VERSION
+our $VERSION = '0.017'; # VERSION
 
 # Dependencies
 use autodie::exception 2.14; # autodie::skip support
 use Exporter 5.57   (qw/import/);
 use File::Spec 3.40 ();
-use Carp       ();
+use Carp ();
 
 our @EXPORT = qw/path/;
 
@@ -53,6 +53,26 @@ sub _throw {
     );
 }
 
+# cheapo option validation
+sub _get_args {
+    my ( $raw, @valid ) = @_;
+    Carp::croak("Options for @{[_called_as()]} must be a hash reference")
+      if defined($raw) && ref($raw) ne 'HASH';
+    my $cooked = {};
+    for my $k (@valid) {
+        $cooked->{$k} = delete $raw->{$k} if exists $raw->{$k};
+    }
+    Carp::croak( "Invalid option(s) for @{[_called_as()]}: " . join( ", ", keys %$raw ) )
+      if keys %$raw;
+    return $cooked;
+}
+
+sub _called_as {
+    my ( undef, undef, undef, $method ) = caller(2);
+    $method =~ s{^.*::}{};
+    return $method;
+}
+
 #--------------------------------------------------------------------------#
 # Constructors
 #--------------------------------------------------------------------------#
@@ -66,6 +86,10 @@ sub path {
     $path = join( "/", ( $path eq '/' ? "" : $path ), @_ ) if @_;
     my $cpath = $path = File::Spec->canonpath($path); # ugh, but probably worth it
     $path =~ tr[\\][/];                               # unix convention enforced
+    if ($path =~ m{^(~[^/]*).*}) {                    # expand a tilde
+        my ($homedir) = glob($1); # glob without list context == heisenbug!
+        $path =~ s{^(~[^/]*)}{$homedir};
+    }
     $path =~ s{/$}{} if $path ne "/"; # hack to make splitpath give us a basename
     bless [ $path, $cpath ], __PACKAGE__;
 }
@@ -76,7 +100,7 @@ sub new { shift; path(@_) }
 
 sub cwd {
     require Cwd;
-    return path(Cwd::getcwd());
+    return path( Cwd::getcwd() );
 }
 
 
@@ -149,6 +173,7 @@ sub absolute {
 sub append {
     my ( $self, @data ) = @_;
     my $args = ( @data && ref $data[0] eq 'HASH' ) ? shift @data : {};
+    $args = _get_args( $args, qw/binmode/ );
     my $binmode = $args->{binmode};
     $binmode = ( ( caller(0) )[10] || {} )->{'open>'} unless defined $binmode;
     my $fh = $self->filehandle( ">>", $binmode );
@@ -255,7 +280,8 @@ sub is_relative { substr( $_[0]->dirname, 0, 1 ) ne '/' }
 
 
 sub iterator {
-    my ( $self, $args ) = @_;
+    my $self = shift;
+    my $args = _get_args( shift, qw/recurse follow_symlinks/ );
     my @dirs = $self;
     my $current;
     return sub {
@@ -281,8 +307,8 @@ sub iterator {
 
 
 sub lines {
-    my ( $self, $args ) = @_;
-    $args = {} unless ref $args eq 'HASH';
+    my $self    = shift;
+    my $args    = _get_args( shift, qw/binmode chomp count/ );
     my $binmode = $args->{binmode};
     $binmode = ( ( caller(0) )[10] || {} )->{'open<'} unless defined $binmode;
     my $fh = $self->filehandle( "<", $binmode );
@@ -304,28 +330,30 @@ sub lines {
 
 
 sub lines_raw {
-    $_[1] = {} unless ref $_[1] eq 'HASH';
-    if ( $_[1]->{chomp} && !$_[1]->{count} ) {
-        return split /\n/, slurp_raw( $_[0] ); ## no critic
+    my $self = shift;
+    my $args = _get_args( shift, qw/binmode chomp count/ );
+    if ( $args->{chomp} && !$args->{count} ) {
+        return split /\n/, slurp_raw($self); ## no critic
     }
     else {
-        $_[1]->{binmode} = ":raw";
-        goto &lines;
+        $args->{binmode} = ":raw";
+        return lines( $self, $args );
     }
 }
 
 
 sub lines_utf8 {
-    $_[1] = {} unless ref $_[1] eq 'HASH';
+    my $self = shift;
+    my $args = _get_args( shift, qw/binmode chomp count/ );
     if (   ( defined($HAS_UU) ? $HAS_UU : $HAS_UU = _check_UU() )
-        && $_[1]->{chomp}
-        && !$_[1]->{count} )
+        && $args->{chomp}
+        && !$args->{count} )
     {
         return split /\n/, slurp_utf8( $_[0] ); ## no critic
     }
     else {
-        $_[1]->{binmode} = ":raw:encoding(UTF-8)";
-        goto &lines;
+        $args->{binmode} = ":raw:encoding(UTF-8)";
+        return lines( $self, $args );
     }
 }
 
@@ -445,6 +473,7 @@ sub remove_tree {
     $args->{safe} = 1     unless defined $args->{safe};
     require File::Path;
     my $count = File::Path::remove_tree( $self->[PATH], $args );
+
     if ( $err && @$err ) {
         my ( $file, $message ) = %{ $err->[0] };
         Carp::croak("remove_tree failed for $file: $message");
@@ -454,8 +483,8 @@ sub remove_tree {
 
 
 sub slurp {
-    my ( $self, $args ) = @_;
-    $args = {} unless ref $args eq 'HASH';
+    my $self    = shift;
+    my $args    = _get_args( shift, qw/binmode/ );
     my $binmode = $args->{binmode};
     $binmode = ( ( caller(0) )[10] || {} )->{'open<'} unless defined $binmode;
     my $fh = $self->filehandle( "<", $binmode );
@@ -493,6 +522,7 @@ sub slurp_utf8 {
 sub spew {
     my ( $self, @data ) = @_;
     my $args = ( @data && ref $data[0] eq 'HASH' ) ? shift @data : {};
+    $args = _get_args( $args, qw/binmode/ );
     my $binmode = $args->{binmode};
     $binmode = ( ( caller(0) )[10] || {} )->{'open>'} unless defined $binmode;
     my $temp = path( $self->[PATH] . $TID . $$ );
@@ -571,13 +601,15 @@ __END__
 
 =pod
 
+=encoding utf-8
+
 =head1 NAME
 
 Path::Tiny - File path utility
 
 =head1 VERSION
 
-version 0.016
+version 0.017
 
 =head1 SYNOPSIS
 
@@ -649,6 +681,7 @@ It uses L<autodie> internally, so most failures will be thrown as exceptions.
     $path = path("foo/bar");
     $path = path("/tmp", "file.txt"); # list
     $path = path(".");                # cwd
+    $path = path("~user/file.txt");   # tilde processing
 
 Constructs a C<Path::Tiny> object.  It doesn't matter if you give a file or
 directory path.  It's still up to you to call directory-like methods only on
@@ -658,6 +691,12 @@ automatically by default.
 The first argument must be defined and have non-zero length or an exception
 will be thrown.  This prevents subtle, dangerous errors with code like
 C<< path( maybe_undef() )->remove_tree >>.
+
+If the first component of the path is a tilde ('~') then the component will be
+replaced with the output of C<glob('~')>.  If the first component of the path
+is a tilde followed by a user name then the component will be replaced with
+output of C<glob('~username')>.  Behaviour for non-existent users depends on
+the output of C<glob> on the system.
 
 =head2 new
 
@@ -1176,7 +1215,11 @@ David Golden <dagolden@cpan.org>
 
 =item *
 
-Chris 'BinGOs' Williams <chris@bingosnet.co.uk>
+Chris Williams <bingos@cpan.org>
+
+=item *
+
+George Hartzell <hartzell@cpan.org>
 
 =item *
 
@@ -1184,7 +1227,7 @@ Karen Etheridge <ether@cpan.org>
 
 =item *
 
-Michael G. Schwern <schwern@pobox.com>
+Michael G. Schwern <mschwern@cpan.org>
 
 =back
 
