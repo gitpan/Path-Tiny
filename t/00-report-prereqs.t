@@ -28,6 +28,7 @@ my @modules = qw(
   File::stat
   List::Util
   Test::Deep
+  Test::FailWarnings
   Test::Fatal
   Test::More
   Unicode::UTF8

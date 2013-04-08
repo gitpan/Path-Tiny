@@ -1,5 +1,17 @@
 Revision history for Path-Tiny
 
+0.018     2013-04-08 12:44:31 America/New_York
+
+    [ADDED]
+
+    - cwd, rootdir, tempfile and tempdir can now be exported on request
+      and used as functions instead of as methods
+
+    [FIXED]
+
+    - Fixed regression in lines() where it no longer returned count
+      of lines in scalar context
+
 0.017     2013-03-28 16:49:15 America/New_York
 
     [ADDED]

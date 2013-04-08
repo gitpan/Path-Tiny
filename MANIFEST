@@ -15,6 +15,7 @@ t/README
 t/basic.t
 t/children.t
 t/exception.t
+t/exports.t
 t/filesystem.t
 t/input_output.t
 t/input_output_no_UU.t

@@ -2,7 +2,7 @@ NAME
     Path::Tiny - File path utility
 
 VERSION
-    version 0.017
+    version 0.018
 
 SYNOPSIS
       use Path::Tiny;
@@ -96,21 +96,33 @@ CONSTRUCTORS
 
   cwd
         $path = Path::Tiny->cwd; # path( Cwd::getcwd )
+        $path = cwd; # optional export
 
     Gives you the absolute path to the current directory as a "Path::Tiny"
     object. This is slightly faster than "path(".")->absolute".
 
+    "cwd" may be exported on request and used as a function instead of as a
+    method.
+
   rootdir
         $path = Path::Tiny->rootdir; # /
+        $path = rootdir;             # optional export
 
     Gives you "File::Spec->rootdir" as a "Path::Tiny" object if you're too
     picky for "path("/")".
 
-  tempfile
-        $temp = Path::Tiny->tempfile( @options );
+    "rootdir" may be exported on request and used as a function instead of
+    as a method.
 
-    This passes the options to "File::Temp->new" and returns a "Path::Tiny"
-    object with the file name. The "TMPDIR" option is enabled by default.
+  tempfile, tempdir
+        $temp = Path::Tiny->tempfile( @options );
+        $temp = Path::Tiny->tempdir( @options );
+        $temp = tempfile( @options ); # optional export
+        $temp = tempdir( @options );  # optional export
+
+    "tempfile" passes the options to "File::Temp->new" and returns a
+    "Path::Tiny" object with the file name. The "TMPDIR" option is enabled
+    by default.
 
     The resulting "File::Temp" object is cached. When the "Path::Tiny"
     object is destroyed, the "File::Temp" object will be as well.
@@ -126,11 +138,11 @@ CONSTRUCTORS
     The tempfile path object will normalized to have an absolute path, even
     if created in a relative directory using "DIR".
 
-  tempdir
-        $temp = Path::Tiny->tempdir( @options );
-
-    This is just like "tempfile", except it calls "File::Temp->newdir"
+    "tempdir" is just like "tempfile", except it calls "File::Temp->newdir"
     instead.
+
+    Both "tempfile" and "tempdir" may be exported on request and used as
+    functions instead of as methods.
 
 METHODS
   absolute
@@ -146,29 +158,24 @@ METHODS
     need them resolved, you must call the more expensive "realpath" method
     instead.
 
-  append
+  append, append_raw, append_utf8
         path("foo.txt")->append(@data);
         path("foo.txt")->append(\@data);
         path("foo.txt")->append({binmode => ":raw"}, @data);
+        path("foo.txt")->append_raw(@data);
+        path("foo.txt")->append_utf8(@data);
 
     Appends data to a file. The file is locked with "flock" prior to
     writing. An optional hash reference may be used to pass options. The
     only option is "binmode", which is passed to "binmode()" on the handle
     used for writing.
 
-  append_raw
-        path("foo.txt")->append_raw(@data);
+    "append_raw" is like "append" with a "binmode" of ":unix" for fast,
+    unbuffered, raw write.
 
-    This is like "append" with a "binmode" of ":unix" for fast, unbuffered,
-    raw write.
-
-  append_utf8
-        path("foo.txt")->append_utf8(@data);
-
-    This is like "append" with a "binmode" of ":unix:encoding(UTF-8)".
-
-    If Unicode::UTF8 0.58+ is installed, a raw append will be done instead
-    on the data encoded with "Unicode::UTF8".
+    "append_utf8" is like "append" with a "binmode" of
+    ":unix:encoding(UTF-8)". If Unicode::UTF8 0.58+ is installed, a raw
+    append will be done instead on the data encoded with "Unicode::UTF8".
 
   basename
         $name = path("foo/bar.txt")->basename; # bar.txt
@@ -209,10 +216,13 @@ METHODS
     usually has the trailing slash. If that's not desired, stringify
     directories or call "parent" on files.
 
-  exists
+  exists, is_file, is_dir
         if ( path("/tmp")->exists ) { ... }
+        if ( path("/tmp")->is_file ) { ... }
+        if ( path("/tmp")->is_dir ) { ... }
 
-    Just like "-e".
+    Just like "-e", "-f" or "-d". This means the file or directory actually
+    has to exist on the filesystem. Until then, it's just a path.
 
   filehandle
         $fh = path("/tmp/foo.txt")->filehandle($mode, $binmode);
@@ -223,27 +233,11 @@ METHODS
 
     See "openr", "openw", "openrw", and "opena" for sugar.
 
-  is_absolute
+  is_absolute, is_relative
         if ( path("/tmp")->is_absolute ) { ... }
-
-    Boolean for whether the path appears absolute or not.
-
-  is_dir
-        if ( path("/tmp")->is_dir ) { ... }
-
-    Just like "-d". This means it actually has to exist on the filesystem.
-    Until then, it's just a path.
-
-  is_file
-        if ( path("/tmp")->is_file ) { ... }
-
-    Just like "-f". This means it actually has to exist on the filesystem.
-    Until then, it's just a path.
-
-  is_relative
         if ( path("/tmp")->is_relative ) { ... }
 
-    Boolean for whether the path appears relative or not.
+    Booleans for whether the path appears absolute or relative.
 
   iterator
         $iter = path("/tmp")->iterator( \%options );
@@ -267,9 +261,11 @@ METHODS
     For a more powerful, recursive iterator with built-in loop avoidance,
     see Path::Iterator::Rule.
 
-  lines
+  lines, lines_raw, lines_utf8
         @contents = path("/tmp/foo.txt")->lines;
         @contents = path("/tmp/foo.txt")->lines(\%options);
+        @contents = path("/tmp/foo.txt")->lines_raw;
+        @contents = path("/tmp/foo.txt")->lines_utf8;
 
     Returns a list of lines from a file. Optionally takes a hash-reference
     of options. Valid options are "binmode", "count" and "chomp". If
@@ -282,26 +278,14 @@ METHODS
 
         $number_of_lines = path("/tmp/foo.txt")->lines;
 
-  lines_raw
-        @contents = path("/tmp/foo.txt")->lines_raw;
+    "lines_raw" is like "lines" with a "binmode" of ":raw". We use ":raw"
+    instead of ":unix" so PerlIO buffering can manage reading by line.
 
-    This is like "lines" with a "binmode" of ":raw". We use ":raw" instead
-    of ":unix" so PerlIO buffering can manage reading by line.
-
-  lines_utf8
-        @contents = path("/tmp/foo.txt")->lines_utf8;
-
-    This is like "lines" with a "binmode" of ":raw:encoding(UTF-8)".
-
+    "lines_utf8" is like "lines" with a "binmode" of ":raw:encoding(UTF-8)".
     If Unicode::UTF8 0.58+ is installed, a raw UTF-8 slurp will be done and
     then the lines will be split. This is actually faster than relying on
     ":encoding(UTF-8)", though a bit memory intensive. If memory use is a
     concern, consider "openr_utf8" and iterating directly on the handle.
-
-  lstat
-        $stat = path("/some/symlink")->lstat;
-
-    Like calling "lstat" from File::stat.
 
   mkpath
         path("foo/bar/baz")->mkpath;
@@ -388,34 +372,31 @@ METHODS
 
         rmdir path("foo/bar/baz/");
 
-  slurp
+  slurp, slurp_raw, slurp_utf8
         $data = path("foo.txt")->slurp;
         $data = path("foo.txt")->slurp( {binmode => ":raw"} );
+        $data = path("foo.txt")->slurp_raw;
+        $data = path("foo.txt")->slurp_utf8;
 
     Reads file contents into a scalar. Takes an optional hash reference may
     be used to pass options. The only option is "binmode", which is passed
     to "binmode()" on the handle used for reading.
 
-  slurp_raw
-        $data = path("foo.txt")->slurp_raw;
+    "slurp_raw" is like "slurp" with a "binmode" of ":unix" for a fast,
+    unbuffered, raw read.
 
-    This is like "slurp" with a "binmode" of ":unix" for a fast, unbuffered,
-    raw read.
+    "slurp_utf8" is like "slurp" with a "binmode" of
+    ":unix:encoding(UTF-8)". If Unicode::UTF8 0.58+ is installed, a raw
+    slurp will be done instead and the result decoded with "Unicode::UTF8".
+    This is is just as strict and is roughly an order of magnitude faster
+    than using ":encoding(UTF-8)".
 
-  slurp_utf8
-        $data = path("foo.txt")->slurp_utf8;
-
-    This is like "slurp" with a "binmode" of ":unix:encoding(UTF-8)".
-
-    If Unicode::UTF8 0.58+ is installed, a raw slurp will be done instead
-    and the result decoded with "Unicode::UTF8". This is is just as strict
-    and is roughly an order of magnitude faster than using
-    ":encoding(UTF-8)".
-
-  spew
+  spew, spew_raw, spew_utf8
         path("foo.txt")->spew(@data);
         path("foo.txt")->spew(\@data);
         path("foo.txt")->spew({binmode => ":raw"}, @data);
+        path("foo.txt")->spew_raw(@data);
+        path("foo.txt")->spew_utf8(@data);
 
     Writes data to a file atomically. The file is written to a temporary
     file in the same directory, then renamed over the original. An optional
@@ -423,24 +404,18 @@ METHODS
     "binmode", which is passed to "binmode()" on the handle used for
     writing.
 
-  spew_raw
-        path("foo.txt")->spew_raw(@data);
+    "spew_raw" is like "spew" with a "binmode" of ":unix" for a fast,
+    unbuffered, raw write.
 
-    This is like "spew" with a "binmode" of ":unix" for a fast, unbuffered,
-    raw write.
-
-  spew_utf8
-        path("foo.txt")->spew_utf8(@data);
-
-    This is like "spew" with a "binmode" of ":unix:encoding(UTF-8)".
-
+    "spew_utf8" is like "spew" with a "binmode" of ":unix:encoding(UTF-8)".
     If Unicode::UTF8 0.58+ is installed, a raw spew will be done instead on
     the data encoded with "Unicode::UTF8".
 
-  stat
+  stat, lstat
         $stat = path("foo.txt")->stat;
+        $stat = path("/some/symlink")->lstat;
 
-    Like calling "stat" from File::stat.
+    Like calling "stat" or "lstat" from File::stat.
 
   stringify
         $path = path("foo.txt");

@@ -4,7 +4,7 @@ use warnings;
 
 package Path::Tiny;
 # ABSTRACT: File path utility
-our $VERSION = '0.017'; # VERSION
+our $VERSION = '0.018'; # VERSION
 
 # Dependencies
 use autodie::exception 2.14; # autodie::skip support
@@ -13,6 +13,7 @@ use File::Spec 3.40 ();
 use Carp ();
 
 our @EXPORT = qw/path/;
+our @EXPORT_OK = qw/cwd rootdir tempfile tempdir/;
 
 use constant {
     PATH  => 0,
@@ -108,7 +109,7 @@ sub rootdir { path( File::Spec->rootdir ) }
 
 
 sub tempfile {
-    my $class = shift;
+    shift if $_[0] eq 'Path::Tiny'; # called as method
     my ( $maybe_template, $args ) = _parse_file_temp_args(@_);
     # File::Temp->new demands TEMPLATE
     $args->{TEMPLATE} = $maybe_template->[0] if @$maybe_template;
@@ -121,9 +122,8 @@ sub tempfile {
     return $self;
 }
 
-
 sub tempdir {
-    my $class = shift;
+    shift if $_[0] eq 'Path::Tiny'; # called as method
     my ( $maybe_template, $args ) = _parse_file_temp_args(@_);
 
     # File::Temp->newdir demands leading template
@@ -190,9 +190,7 @@ sub append {
     close $fh or _throw( 'close', [$fh] );
 }
 
-
 sub append_raw { splice @_, 1, 0, { binmode => ":unix" }; goto &append }
-
 
 sub append_utf8 {
     if ( defined($HAS_UU) ? $HAS_UU : $HAS_UU = _check_UU() ) {
@@ -250,6 +248,10 @@ sub dirname {
 
 sub exists { -e $_[0]->[PATH] }
 
+sub is_file { -f $_[0]->[PATH] }
+
+sub is_dir { -d $_[0]->[PATH] }
+
 
 # Note: must put binmode on open line, not subsequent binmode() call, so things
 # like ":unix" actually stop perlio/crlf from being added
@@ -269,13 +271,6 @@ sub filehandle {
 
 sub is_absolute { substr( $_[0]->dirname, 0, 1 ) eq '/' }
 
-
-sub is_dir { -d $_[0]->[PATH] }
-
-
-sub is_file { -f $_[0]->[PATH] }
-
-
 sub is_relative { substr( $_[0]->dirname, 0, 1 ) ne '/' }
 
 
@@ -289,8 +284,15 @@ sub iterator {
         while (@dirs) {
             if ( ref $dirs[0] eq 'Path::Tiny' ) {
                 $current = $dirs[0];
-                opendir( my $dh, $current->[PATH] );
+                my $dh;
+                opendir( $dh, $current->[PATH] )
+                    or _throw( 'opendir', [$dh, $current->[PATH]] );
                 $dirs[0] = $dh;
+                if ( -l $dirs[0] && ! $args->{follow_symlinks} ) {
+                    # Symlink attack! It was a real dir, but is now a symlink!
+                    # N.B. we check *after* opendir so we don't have a race
+                    shift @dirs and next;
+                }
             }
             while ( defined( $next = readdir $dirs[0] ) ) {
                 next if $next eq '.' || $next eq '..';
@@ -324,10 +326,9 @@ sub lines {
         return map { chomp; $_ } <$fh>;
     }
     else {
-        return <$fh>;
+        return wantarray ? <$fh> : (my $count =()= <$fh>);
     }
 }
-
 
 sub lines_raw {
     my $self = shift;
@@ -340,7 +341,6 @@ sub lines_raw {
         return lines( $self, $args );
     }
 }
-
 
 sub lines_utf8 {
     my $self = shift;
@@ -355,13 +355,6 @@ sub lines_utf8 {
         $args->{binmode} = ":raw:encoding(UTF-8)";
         return lines( $self, $args );
     }
-}
-
-
-sub lstat {
-    my $self = shift;
-    require File::stat;
-    return File::stat::lstat( $self->[PATH] ) || _throw( 'lstat', [ $self->[PATH] ] );
 }
 
 
@@ -503,9 +496,7 @@ sub slurp {
     }
 }
 
-
 sub slurp_raw { $_[1] = { binmode => ":unix" }; goto &slurp }
-
 
 sub slurp_utf8 {
     if ( defined($HAS_UU) ? $HAS_UU : $HAS_UU = _check_UU() ) {
@@ -537,9 +528,7 @@ sub spew {
     return $temp->move( $self->[PATH] );
 }
 
-
 sub spew_raw { splice @_, 1, 0, { binmode => ":unix" }; goto &spew }
-
 
 sub spew_utf8 {
     if ( defined($HAS_UU) ? $HAS_UU : $HAS_UU = _check_UU() ) {
@@ -558,6 +547,12 @@ sub stat {
     my $self = shift;
     require File::stat;
     return File::stat::stat( $self->[PATH] ) || _throw( 'stat', [ $self->[PATH] ] );
+}
+
+sub lstat {
+    my $self = shift;
+    require File::stat;
+    return File::stat::lstat( $self->[PATH] ) || _throw( 'lstat', [ $self->[PATH] ] );
 }
 
 
@@ -609,7 +604,7 @@ Path::Tiny - File path utility
 
 =head1 VERSION
 
-version 0.017
+version 0.018
 
 =head1 SYNOPSIS
 
@@ -708,22 +703,33 @@ do that?)
 =head2 cwd
 
     $path = Path::Tiny->cwd; # path( Cwd::getcwd )
+    $path = cwd; # optional export
 
 Gives you the absolute path to the current directory as a C<Path::Tiny> object.
 This is slightly faster than C<< path(".")->absolute >>.
 
+C<cwd> may be exported on request and used as a function instead of as a
+method.
+
 =head2 rootdir
 
     $path = Path::Tiny->rootdir; # /
+    $path = rootdir;             # optional export 
 
 Gives you C<< File::Spec->rootdir >> as a C<Path::Tiny> object if you're too
 picky for C<path("/")>.
 
-=head2 tempfile
+C<rootdir> may be exported on request and used as a function instead of as a
+method.
+
+=head2 tempfile, tempdir
 
     $temp = Path::Tiny->tempfile( @options );
+    $temp = Path::Tiny->tempdir( @options );
+    $temp = tempfile( @options ); # optional export
+    $temp = tempdir( @options );  # optional export
 
-This passes the options to C<< File::Temp->new >> and returns a C<Path::Tiny>
+C<tempfile> passes the options to C<< File::Temp->new >> and returns a C<Path::Tiny>
 object with the file name.  The C<TMPDIR> option is enabled by default.
 
 The resulting C<File::Temp> object is cached. When the C<Path::Tiny> object is
@@ -740,11 +746,11 @@ C<TEMPLATE> option and does the right thing.
 The tempfile path object will normalized to have an absolute path, even if
 created in a relative directory using C<DIR>.
 
-=head2 tempdir
+C<tempdir> is just like C<tempfile>, except it calls
+C<< File::Temp->newdir >> instead.
 
-    $temp = Path::Tiny->tempdir( @options );
-
-This is just like C<tempfile>, except it calls C<< File::Temp->newdir >> instead.
+Both C<tempfile> and C<tempdir> may be exported on request and used as
+functions instead of as methods.
 
 =head1 METHODS
 
@@ -761,30 +767,24 @@ This will not resolve upward directories ("foo/../bar") unless C<canonpath>
 in L<File::Spec> would normally do so on your platform.  If you need them
 resolved, you must call the more expensive C<realpath> method instead.
 
-=head2 append
+=head2 append, append_raw, append_utf8
 
     path("foo.txt")->append(@data);
     path("foo.txt")->append(\@data);
     path("foo.txt")->append({binmode => ":raw"}, @data);
+    path("foo.txt")->append_raw(@data);
+    path("foo.txt")->append_utf8(@data);
 
 Appends data to a file.  The file is locked with C<flock> prior to writing.  An
 optional hash reference may be used to pass options.  The only option is
 C<binmode>, which is passed to C<binmode()> on the handle used for writing.
 
-=head2 append_raw
+C<append_raw> is like C<append> with a C<binmode> of C<:unix> for fast,
+unbuffered, raw write.
 
-    path("foo.txt")->append_raw(@data);
-
-This is like C<append> with a C<binmode> of C<:unix> for fast, unbuffered, raw write.
-
-=head2 append_utf8
-
-    path("foo.txt")->append_utf8(@data);
-
-This is like C<append> with a C<binmode> of C<:unix:encoding(UTF-8)>.
-
-If L<Unicode::UTF8> 0.58+ is installed, a raw append will be done instead on the data
-encoded with C<Unicode::UTF8>.
+C<append_utf8> is like C<append> with a C<binmode> of
+C<:unix:encoding(UTF-8)>.  If L<Unicode::UTF8> 0.58+ is installed, a raw
+append will be done instead on the data encoded with C<Unicode::UTF8>.
 
 =head2 basename
 
@@ -831,11 +831,14 @@ equivalent to what L<File::Spec> would give from C<splitpath> and thus
 usually has the trailing slash. If that's not desired, stringify directories
 or call C<parent> on files.
 
-=head2 exists
+=head2 exists, is_file, is_dir
 
     if ( path("/tmp")->exists ) { ... }
+    if ( path("/tmp")->is_file ) { ... }
+    if ( path("/tmp")->is_dir ) { ... }
 
-Just like C<-e>.
+Just like C<-e>, C<-f> or C<-d>.  This means the file or directory actually has to
+exist on the filesystem.  Until then, it's just a path.
 
 =head2 filehandle
 
@@ -847,31 +850,12 @@ is given, it is set during the C<open> call.
 
 See C<openr>, C<openw>, C<openrw>, and C<opena> for sugar.
 
-=head2 is_absolute
+=head2 is_absolute, is_relative
 
     if ( path("/tmp")->is_absolute ) { ... }
-
-Boolean for whether the path appears absolute or not.
-
-=head2 is_dir
-
-    if ( path("/tmp")->is_dir ) { ... }
-
-Just like C<-d>.  This means it actually has to exist on the filesystem.
-Until then, it's just a path.
-
-=head2 is_file
-
-    if ( path("/tmp")->is_file ) { ... }
-
-Just like C<-f>.  This means it actually has to exist on the filesystem.
-Until then, it's just a path.
-
-=head2 is_relative
-
     if ( path("/tmp")->is_relative ) { ... }
 
-Boolean for whether the path appears relative or not.
+Booleans for whether the path appears absolute or relative.
 
 =head2 iterator
 
@@ -896,10 +880,12 @@ loops when following links.
 For a more powerful, recursive iterator with built-in loop avoidance, see
 L<Path::Iterator::Rule>.
 
-=head2 lines
+=head2 lines, lines_raw, lines_utf8
 
     @contents = path("/tmp/foo.txt")->lines;
     @contents = path("/tmp/foo.txt")->lines(\%options);
+    @contents = path("/tmp/foo.txt")->lines_raw;
+    @contents = path("/tmp/foo.txt")->lines_utf8;
 
 Returns a list of lines from a file.  Optionally takes a hash-reference of
 options.  Valid options are C<binmode>, C<count> and C<chomp>.  If C<binmode>
@@ -912,29 +898,15 @@ of lines (and throw away the data).
 
     $number_of_lines = path("/tmp/foo.txt")->lines;
 
-=head2 lines_raw
+C<lines_raw> is like C<lines> with a C<binmode> of C<:raw>.  We use C<:raw>
+instead of C<:unix> so PerlIO buffering can manage reading by line.
 
-    @contents = path("/tmp/foo.txt")->lines_raw;
-
-This is like C<lines> with a C<binmode> of C<:raw>.  We use C<:raw> instead
-of C<:unix> so PerlIO buffering can manage reading by line.
-
-=head2 lines_utf8
-
-    @contents = path("/tmp/foo.txt")->lines_utf8;
-
-This is like C<lines> with a C<binmode> of C<:raw:encoding(UTF-8)>.
-
-If L<Unicode::UTF8> 0.58+ is installed, a raw UTF-8 slurp will be done and then the
-lines will be split.  This is actually faster than relying on C<:encoding(UTF-8)>,
-though a bit memory intensive.  If memory use is a concern, consider C<openr_utf8>
-and iterating directly on the handle.
-
-=head2 lstat
-
-    $stat = path("/some/symlink")->lstat;
-
-Like calling C<lstat> from L<File::stat>.
+C<lines_utf8> is like C<lines> with a C<binmode> of
+C<:raw:encoding(UTF-8)>.  If L<Unicode::UTF8> 0.58+ is installed, a raw
+UTF-8 slurp will be done and then the lines will be split.  This is
+actually faster than relying on C<:encoding(UTF-8)>, though a bit memory
+intensive.  If memory use is a concern, consider C<openr_utf8> and
+iterating directly on the handle.
 
 =head2 mkpath
 
@@ -1030,63 +1002,52 @@ C<rmdir> function instead.
 
     rmdir path("foo/bar/baz/");
 
-=head2 slurp
+=head2 slurp, slurp_raw, slurp_utf8
 
     $data = path("foo.txt")->slurp;
     $data = path("foo.txt")->slurp( {binmode => ":raw"} );
+    $data = path("foo.txt")->slurp_raw;
+    $data = path("foo.txt")->slurp_utf8;
 
 Reads file contents into a scalar.  Takes an optional hash reference may be
 used to pass options.  The only option is C<binmode>, which is passed to
 C<binmode()> on the handle used for reading.
 
-=head2 slurp_raw
-
-    $data = path("foo.txt")->slurp_raw;
-
-This is like C<slurp> with a C<binmode> of C<:unix> for
+C<slurp_raw> is like C<slurp> with a C<binmode> of C<:unix> for
 a fast, unbuffered, raw read.
 
-=head2 slurp_utf8
+C<slurp_utf8> is like C<slurp> with a C<binmode> of
+C<:unix:encoding(UTF-8)>.  If L<Unicode::UTF8> 0.58+ is installed, a raw
+slurp will be done instead and the result decoded with C<Unicode::UTF8>.
+This is is just as strict and is roughly an order of magnitude faster than
+using C<:encoding(UTF-8)>.
 
-    $data = path("foo.txt")->slurp_utf8;
-
-This is like C<slurp> with a C<binmode> of C<:unix:encoding(UTF-8)>.
-
-If L<Unicode::UTF8> 0.58+ is installed, a raw slurp will be done instead and the
-result decoded with C<Unicode::UTF8>.  This is is just as strict and is roughly
-an order of magnitude faster than using C<:encoding(UTF-8)>.
-
-=head2 spew
+=head2 spew, spew_raw, spew_utf8
 
     path("foo.txt")->spew(@data);
     path("foo.txt")->spew(\@data);
     path("foo.txt")->spew({binmode => ":raw"}, @data);
+    path("foo.txt")->spew_raw(@data);
+    path("foo.txt")->spew_utf8(@data);
 
 Writes data to a file atomically.  The file is written to a temporary file in
 the same directory, then renamed over the original.  An optional hash reference
 may be used to pass options.  The only option is C<binmode>, which is passed to
 C<binmode()> on the handle used for writing.
 
-=head2 spew_raw
+C<spew_raw> is like C<spew> with a C<binmode> of C<:unix> for a fast,
+unbuffered, raw write.
 
-    path("foo.txt")->spew_raw(@data);
+C<spew_utf8> is like C<spew> with a C<binmode> of C<:unix:encoding(UTF-8)>.
+If L<Unicode::UTF8> 0.58+ is installed, a raw spew will be done instead on
+the data encoded with C<Unicode::UTF8>.
 
-This is like C<spew> with a C<binmode> of C<:unix> for a fast, unbuffered, raw write.
-
-=head2 spew_utf8
-
-    path("foo.txt")->spew_utf8(@data);
-
-This is like C<spew> with a C<binmode> of C<:unix:encoding(UTF-8)>.
-
-If L<Unicode::UTF8> 0.58+ is installed, a raw spew will be done instead on the data
-encoded with C<Unicode::UTF8>.
-
-=head2 stat
+=head2 stat, lstat
 
     $stat = path("foo.txt")->stat;
+    $stat = path("/some/symlink")->lstat;
 
-Like calling C<stat> from L<File::stat>.
+Like calling C<stat> or C<lstat> from L<File::stat>.
 
 =head2 stringify
 
