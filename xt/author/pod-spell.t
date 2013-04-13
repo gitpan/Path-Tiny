@@ -13,6 +13,7 @@ BENCHMARKING
 BinGOs
 CRLF
 Etheridge
+Goro
 Hartzell
 Stringifying
 canonpath

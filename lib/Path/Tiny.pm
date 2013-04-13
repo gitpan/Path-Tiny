@@ -4,7 +4,7 @@ use warnings;
 
 package Path::Tiny;
 # ABSTRACT: File path utility
-our $VERSION = '0.019'; # VERSION
+our $VERSION = '0.020'; # VERSION
 
 # Dependencies
 use autodie::exception 2.14; # autodie::skip support
@@ -234,8 +234,9 @@ sub children {
 
 # XXX do recursively for directories?
 sub copy {
+    my($self, $dest) = @_;
     require File::Copy;
-    File::Copy::copy( $_[0]->[PATH], "$_[1]" ) or Carp::croak("copy failed: $!");
+    File::Copy::copy( $self->[PATH], $dest ) or Carp::croak("copy failed for $self to $dest: $!");
 }
 
 
@@ -606,7 +607,7 @@ Path::Tiny - File path utility
 
 =head1 VERSION
 
-version 0.019
+version 0.020
 
 =head1 SYNOPSIS
 
@@ -1183,6 +1184,10 @@ Chris Williams <bingos@cpan.org>
 =item *
 
 George Hartzell <hartzell@cpan.org>
+
+=item *
+
+Goro Fuji <gfuji@cpan.org>
 
 =item *
 
