@@ -2,7 +2,7 @@ NAME
     Path::Tiny - File path utility
 
 VERSION
-    version 0.020
+    version 0.021
 
 SYNOPSIS
       use Path::Tiny;
@@ -388,8 +388,8 @@ METHODS
     "slurp_utf8" is like "slurp" with a "binmode" of
     ":unix:encoding(UTF-8)". If Unicode::UTF8 0.58+ is installed, a raw
     slurp will be done instead and the result decoded with "Unicode::UTF8".
-    This is is just as strict and is roughly an order of magnitude faster
-    than using ":encoding(UTF-8)".
+    This is just as strict and is roughly an order of magnitude faster than
+    using ":encoding(UTF-8)".
 
   spew, spew_raw, spew_utf8
         path("foo.txt")->spew(@data);
@@ -521,6 +521,8 @@ AUTHOR
 
 CONTRIBUTORS
     *   Chris Williams <bingos@cpan.org>
+
+    *   David Steinbrunner <dsteinbrunner@pobox.com>
 
     *   George Hartzell <hartzell@cpan.org>
 

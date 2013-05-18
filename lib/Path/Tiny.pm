@@ -4,7 +4,7 @@ use warnings;
 
 package Path::Tiny;
 # ABSTRACT: File path utility
-our $VERSION = '0.020'; # VERSION
+our $VERSION = '0.021'; # VERSION
 
 # Dependencies
 use autodie::exception 2.14; # autodie::skip support
@@ -352,7 +352,7 @@ sub lines_utf8 {
         && $args->{chomp}
         && !$args->{count} )
     {
-        return split /\n/, slurp_utf8( $_[0] ); ## no critic
+        return split /\n/, slurp_utf8( $self ); ## no critic
     }
     else {
         $args->{binmode} = ":raw:encoding(UTF-8)";
@@ -607,7 +607,7 @@ Path::Tiny - File path utility
 
 =head1 VERSION
 
-version 0.020
+version 0.021
 
 =head1 SYNOPSIS
 
@@ -1022,7 +1022,7 @@ a fast, unbuffered, raw read.
 C<slurp_utf8> is like C<slurp> with a C<binmode> of
 C<:unix:encoding(UTF-8)>.  If L<Unicode::UTF8> 0.58+ is installed, a raw
 slurp will be done instead and the result decoded with C<Unicode::UTF8>.
-This is is just as strict and is roughly an order of magnitude faster than
+This is just as strict and is roughly an order of magnitude faster than
 using C<:encoding(UTF-8)>.
 
 =head2 spew, spew_raw, spew_utf8
@@ -1180,6 +1180,10 @@ David Golden <dagolden@cpan.org>
 =item *
 
 Chris Williams <bingos@cpan.org>
+
+=item *
+
+David Steinbrunner <dsteinbrunner@pobox.com>
 
 =item *
 

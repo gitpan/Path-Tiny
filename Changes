@@ -1,5 +1,15 @@
 Revision history for Path-Tiny
 
+0.021     2013-05-17 22:53:18 America/New_York
+
+    [FIXED]
+
+    - Fixed fatal bug with lines_utf8 using chomp
+
+    [DOCS]
+
+    - Pod typos fixed
+
 0.020     2013-04-13 06:58:11 Europe/London
 
     [FIXED]
