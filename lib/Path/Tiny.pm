@@ -4,7 +4,7 @@ use warnings;
 
 package Path::Tiny;
 # ABSTRACT: File path utility
-our $VERSION = '0.021'; # VERSION
+our $VERSION = '0.022'; # VERSION
 
 # Dependencies
 use autodie::exception 2.14; # autodie::skip support
@@ -563,15 +563,14 @@ sub stringify { $_[0]->[PATH] }
 
 
 sub touch {
-    my ($self) = @_;
-    if ( -e $self->[PATH] ) {
-        my $now = time();
-        utime $now, $now, $self->[PATH] or _throw( 'utime', [ $now, $now, $self->[PATH] ] );
-    }
-    else {
+    my ( $self, $epoch ) = @_;
+    if ( ! -e $self->[PATH] ) {
         my $fh = $self->openw;
         close $fh or _throw( 'close', [$fh] );
     }
+    $epoch = defined($epoch) ? $epoch : time();
+    utime $epoch, $epoch, $self->[PATH]
+        or _throw( 'utime', [ $epoch, $epoch, $self->[PATH] ] );
     return $self;
 }
 
@@ -607,7 +606,7 @@ Path::Tiny - File path utility
 
 =head1 VERSION
 
-version 0.021
+version 0.022
 
 =head1 SYNOPSIS
 
@@ -1063,9 +1062,11 @@ returns the path standardized with Unix-style C</> directory separators.
 =head2 touch
 
     path("foo.txt")->touch;
+    path("foo.txt")->touch($epoch_secs);
 
 Like the Unix C<touch> utility.  Creates the file if it doesn't exist, or else
-changes the modification and access times to the current time.
+changes the modification and access times to the current time.  If the first
+argument is the epoch seconds then it will be used.
 
 Returns the path object so it can be easily chained with spew:
 
@@ -1196,6 +1197,10 @@ Goro Fuji <gfuji@cpan.org>
 =item *
 
 Karen Etheridge <ether@cpan.org>
+
+=item *
+
+Keedi Kim <keedi@cpan.org>
 
 =item *
 

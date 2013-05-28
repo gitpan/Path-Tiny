@@ -2,7 +2,7 @@ NAME
     Path::Tiny - File path utility
 
 VERSION
-    version 0.021
+    version 0.022
 
 SYNOPSIS
       use Path::Tiny;
@@ -427,9 +427,11 @@ METHODS
 
   touch
         path("foo.txt")->touch;
+        path("foo.txt")->touch($epoch_secs);
 
     Like the Unix "touch" utility. Creates the file if it doesn't exist, or
-    else changes the modification and access times to the current time.
+    else changes the modification and access times to the current time. If
+    the first argument is the epoch seconds then it will be used.
 
     Returns the path object so it can be easily chained with spew:
 
@@ -529,6 +531,8 @@ CONTRIBUTORS
     *   Goro Fuji <gfuji@cpan.org>
 
     *   Karen Etheridge <ether@cpan.org>
+
+    *   Keedi Kim <keedi@cpan.org>
 
     *   Michael G. Schwern <mschwern@cpan.org>
 
