@@ -4,7 +4,7 @@ use warnings;
 
 package Path::Tiny;
 # ABSTRACT: File path utility
-our $VERSION = '0.022'; # VERSION
+our $VERSION = '0.023'; # VERSION
 
 # Dependencies
 use autodie::exception 2.14; # autodie::skip support
@@ -454,7 +454,7 @@ sub relative { path( File::Spec->abs2rel( $_[0]->[PATH], $_[1] ) ) }
 sub remove {
     my $self = shift;
 
-    return 0 if !-e $self->[PATH];
+    return 0 if !-e $self->[PATH] && !-l $self->[PATH];
 
     return unlink $self->[PATH] || _throw( 'unlink', [ $self->[PATH] ] );
 }
@@ -462,7 +462,7 @@ sub remove {
 
 sub remove_tree {
     my ( $self, $args ) = @_;
-    return 0 unless -e $self->[PATH];
+    return 0 if !-e $self->[PATH] && !-l $self->[PATH];
     $args = {} unless ref $args eq 'HASH';
     my $err;
     $args->{err}  = \$err unless defined $args->{err};
@@ -606,7 +606,7 @@ Path::Tiny - File path utility
 
 =head1 VERSION
 
-version 0.022
+version 0.023
 
 =head1 SYNOPSIS
 
@@ -1197,6 +1197,10 @@ Goro Fuji <gfuji@cpan.org>
 =item *
 
 Karen Etheridge <ether@cpan.org>
+
+=item *
+
+Keedi Kim <keedi.k@gmail.com>
 
 =item *
 
