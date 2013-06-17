@@ -33,6 +33,7 @@ my %WriteMakefileArgs = (
     "constant" => 0,
     "overload" => 0,
     "strict" => 0,
+    "threads" => 0,
     "warnings" => 0
   },
   "TEST_REQUIRES" => {
@@ -50,7 +51,7 @@ my %WriteMakefileArgs = (
     "Test::More" => "0.96",
     "open" => 0
   },
-  "VERSION" => "0.023",
+  "VERSION" => "0.024",
   "test" => {
     "TESTS" => "t/*.t"
   }

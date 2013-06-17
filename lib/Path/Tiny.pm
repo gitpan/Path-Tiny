@@ -4,7 +4,7 @@ use warnings;
 
 package Path::Tiny;
 # ABSTRACT: File path utility
-our $VERSION = '0.023'; # VERSION
+our $VERSION = '0.024'; # VERSION
 
 # Dependencies
 use autodie::exception 2.14; # autodie::skip support
@@ -32,7 +32,9 @@ use overload (
 
 my $TID = 0; # for thread safe atomic writes
 
-sub CLONE { $TID = threads->tid }; # if cloning, threads should be loaded
+# if cloning, threads should already be loaded, but Win32 pseudoforks
+# don't do that so we have to be sure it's loaded anyway
+sub CLONE { require threads; threads->tid };
 
 sub DOES { return $_[1] eq 'autodie::skip' } # report errors like croak
 
@@ -606,7 +608,7 @@ Path::Tiny - File path utility
 
 =head1 VERSION
 
-version 0.023
+version 0.024
 
 =head1 SYNOPSIS
 
@@ -1197,10 +1199,6 @@ Goro Fuji <gfuji@cpan.org>
 =item *
 
 Karen Etheridge <ether@cpan.org>
-
-=item *
-
-Keedi Kim <keedi.k@gmail.com>
 
 =item *
 
