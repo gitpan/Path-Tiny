@@ -11,7 +11,6 @@ use List::Util qw/max/;
 
 my @modules = qw(
   Carp
-  Config
   Cwd
   Devel::Hide
   Exporter

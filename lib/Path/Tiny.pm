@@ -4,7 +4,7 @@ use warnings;
 
 package Path::Tiny;
 # ABSTRACT: File path utility
-our $VERSION = '0.024'; # VERSION
+our $VERSION = '0.025'; # VERSION
 
 # Dependencies
 use autodie::exception 2.14; # autodie::skip support
@@ -12,7 +12,7 @@ use Exporter 5.57   (qw/import/);
 use File::Spec 3.40 ();
 use Carp ();
 
-our @EXPORT = qw/path/;
+our @EXPORT    = qw/path/;
 our @EXPORT_OK = qw/cwd rootdir tempfile tempdir/;
 
 use constant {
@@ -34,7 +34,7 @@ my $TID = 0; # for thread safe atomic writes
 
 # if cloning, threads should already be loaded, but Win32 pseudoforks
 # don't do that so we have to be sure it's loaded anyway
-sub CLONE { require threads; threads->tid };
+sub CLONE { require threads; threads->tid }
 
 sub DOES { return $_[1] eq 'autodie::skip' } # report errors like croak
 
@@ -89,7 +89,7 @@ sub path {
     $path = join( "/", ( $path eq '/' ? "" : $path ), @_ ) if @_;
     my $cpath = $path = File::Spec->canonpath($path); # ugh, but probably worth it
     $path =~ tr[\\][/];                               # unix convention enforced
-    if ($path =~ m{^(~[^/]*).*}) {                    # expand a tilde
+    if ( $path =~ m{^(~[^/]*).*} ) {                  # expand a tilde
         my ($homedir) = glob($1); # glob without list context == heisenbug!
         $path =~ s{^(~[^/]*)}{$homedir};
     }
@@ -120,7 +120,7 @@ sub tempfile {
     my $temp = File::Temp->new( TMPDIR => 1, %$args );
     close $temp;
     my $self = path($temp)->absolute;
-    $self->[TEMP] = $temp; # keep object alive while we are
+    $self->[TEMP] = $temp;          # keep object alive while we are
     return $self;
 }
 
@@ -132,7 +132,7 @@ sub tempdir {
     require File::Temp;
     my $temp = File::Temp->newdir( @$maybe_template, TMPDIR => 1, %$args );
     my $self = path($temp)->absolute;
-    $self->[TEMP] = $temp; # keep object alive while we are
+    $self->[TEMP] = $temp;          # keep object alive while we are
     return $self;
 }
 
@@ -236,9 +236,10 @@ sub children {
 
 # XXX do recursively for directories?
 sub copy {
-    my($self, $dest) = @_;
+    my ( $self, $dest ) = @_;
     require File::Copy;
-    File::Copy::copy( $self->[PATH], $dest ) or Carp::croak("copy failed for $self to $dest: $!");
+    File::Copy::copy( $self->[PATH], $dest )
+      or Carp::croak("copy failed for $self to $dest: $!");
 }
 
 
@@ -289,9 +290,9 @@ sub iterator {
                 $current = $dirs[0];
                 my $dh;
                 opendir( $dh, $current->[PATH] )
-                    or _throw( 'opendir', [$dh, $current->[PATH]] );
+                  or _throw( 'opendir', [ $dh, $current->[PATH] ] );
                 $dirs[0] = $dh;
-                if ( -l $current->[PATH] && ! $args->{follow_symlinks} ) {
+                if ( -l $current->[PATH] && !$args->{follow_symlinks} ) {
                     # Symlink attack! It was a real dir, but is now a symlink!
                     # N.B. we check *after* opendir so the attacker has to win
                     # two races: replace dir with symlink before opendir and
@@ -331,7 +332,7 @@ sub lines {
         return map { chomp; $_ } <$fh>;
     }
     else {
-        return wantarray ? <$fh> : (my $count =()= <$fh>);
+        return wantarray ? <$fh> : ( my $count =()= <$fh> );
     }
 }
 
@@ -354,7 +355,7 @@ sub lines_utf8 {
         && $args->{chomp}
         && !$args->{count} )
     {
-        return split /\n/, slurp_utf8( $self ); ## no critic
+        return split /\n/, slurp_utf8($self); ## no critic
     }
     else {
         $args->{binmode} = ":raw:encoding(UTF-8)";
@@ -530,7 +531,12 @@ sub spew {
     print {$fh} map { ref eq 'ARRAY' ? @$_ : $_ } @data;
     flock( $fh, Fcntl::LOCK_UN() ) or _throw( 'flock', [ $fh, Fcntl::LOCK_UN() ] );
     close $fh or _throw( 'close', [$fh] );
-    return $temp->move( $self->[PATH] );
+
+    # spewing need to follow the link
+    # and replace the destination instead
+    my $resolved_path = $self->[PATH];
+    $resolved_path = readlink $resolved_path while -l $resolved_path;
+    return $temp->move($resolved_path);
 }
 
 sub spew_raw { splice @_, 1, 0, { binmode => ":unix" }; goto &spew }
@@ -566,13 +572,13 @@ sub stringify { $_[0]->[PATH] }
 
 sub touch {
     my ( $self, $epoch ) = @_;
-    if ( ! -e $self->[PATH] ) {
+    if ( !-e $self->[PATH] ) {
         my $fh = $self->openw;
         close $fh or _throw( 'close', [$fh] );
     }
     $epoch = defined($epoch) ? $epoch : time();
     utime $epoch, $epoch, $self->[PATH]
-        or _throw( 'utime', [ $epoch, $epoch, $self->[PATH] ] );
+      or _throw( 'utime', [ $epoch, $epoch, $self->[PATH] ] );
     return $self;
 }
 
@@ -608,7 +614,7 @@ Path::Tiny - File path utility
 
 =head1 VERSION
 
-version 0.024
+version 0.025
 
 =head1 SYNOPSIS
 

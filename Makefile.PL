@@ -37,7 +37,6 @@ my %WriteMakefileArgs = (
     "warnings" => 0
   },
   "TEST_REQUIRES" => {
-    "Config" => 0,
     "Devel::Hide" => 0,
     "ExtUtils::MakeMaker" => 0,
     "File::Find" => 0,
@@ -51,7 +50,7 @@ my %WriteMakefileArgs = (
     "Test::More" => "0.96",
     "open" => 0
   },
-  "VERSION" => "0.024",
+  "VERSION" => "0.025",
   "test" => {
     "TESTS" => "t/*.t"
   }
