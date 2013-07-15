@@ -4,7 +4,7 @@ use warnings;
 
 package Path::Tiny;
 # ABSTRACT: File path utility
-our $VERSION = '0.025'; # VERSION
+our $VERSION = '0.026'; # VERSION
 
 # Dependencies
 use autodie::exception 2.14; # autodie::skip support
@@ -323,10 +323,15 @@ sub lines {
     require Fcntl;
     flock( $fh, Fcntl::LOCK_SH() ) or _throw( 'flock', [ $fh, Fcntl::LOCK_SH() ] );
     my $chomp = $args->{chomp};
-    my @lines;
     # XXX more efficient to read @lines then chomp(@lines) vs map?
     if ( $args->{count} ) {
-        return map { chomp if $chomp; $_ } map { scalar <$fh> } 1 .. $args->{count};
+        my (@result, $counter);
+        while ( my $line = <$fh> ) {
+            chomp $line if $chomp;
+            push @result, $line;
+            last if ++$counter == $args->{count};
+        }
+        return @result;
     }
     elsif ($chomp) {
         return map { chomp; $_ } <$fh>;
@@ -614,7 +619,7 @@ Path::Tiny - File path utility
 
 =head1 VERSION
 
-version 0.025
+version 0.026
 
 =head1 SYNOPSIS
 
