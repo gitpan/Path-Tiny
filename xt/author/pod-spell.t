@@ -10,12 +10,8 @@ add_stopwords(<DATA>);
 all_pod_files_spelling_ok( qw( bin lib  ) );
 __DATA__
 BENCHMARKING
-BinGOs
 CRLF
-Etheridge
-Goro
-Hartzell
-Stringifying
+SHA
 canonpath
 codepoints
 cwd
@@ -27,6 +23,7 @@ openr
 openrw
 openw
 realpath
+stringifying
 subclasses
 touchpath
 unlinked
@@ -39,11 +36,17 @@ Williams
 bingos
 Steinbrunner
 dsteinbrunner
+Gabor
+Szabo
+szabgab
 George
+Hartzell
 hartzell
+Goro
 Fuji
 gfuji
 Karen
+Etheridge
 ether
 Keedi
 Kim

@@ -4,7 +4,7 @@ use warnings;
 
 package Path::Tiny;
 # ABSTRACT: File path utility
-our $VERSION = '0.026'; # VERSION
+our $VERSION = '0.027'; # VERSION
 
 # Dependencies
 use autodie::exception 2.14; # autodie::skip support
@@ -240,6 +240,14 @@ sub copy {
     require File::Copy;
     File::Copy::copy( $self->[PATH], $dest )
       or Carp::croak("copy failed for $self to $dest: $!");
+}
+
+
+sub digest {
+    my ($self, $alg, @args) = @_;
+    $alg = 'SHA-256' unless defined $alg;
+    require Digest;
+    return Digest->new($alg, @args)->add( $self->slurp_raw )->hexdigest;
 }
 
 
@@ -619,7 +627,7 @@ Path::Tiny - File path utility
 
 =head1 VERSION
 
-version 0.026
+version 0.027
 
 =head1 SYNOPSIS
 
@@ -837,6 +845,15 @@ within a directory.  Excludes "." and ".." automatically.
 
 Copies a file using L<File::Copy>'s C<copy> function.
 
+=head2 digest
+
+    $obj = path("/tmp/foo.txt")->digest;        # SHA-256
+    $obj = path("/tmp/foo.txt")->digest("MD5"); # user-selected
+
+Returns a hexadecimal digest for a file.  Any arguments are passed to the
+constructor for L<Digest> to select an algorithm.  If no arguments are given,
+the default is SHA-256.
+
 =head2 dirname
 
     $name = path("/tmp/foo.txt")->dirname; # "/tmp/"
@@ -901,6 +918,8 @@ L<Path::Iterator::Rule>.
     @contents = path("/tmp/foo.txt")->lines(\%options);
     @contents = path("/tmp/foo.txt")->lines_raw;
     @contents = path("/tmp/foo.txt")->lines_utf8;
+
+    @contents = path("/tmp/foo.txt")->lines( { chomp => 1, count => 4 } );
 
 Returns a list of lines from a file.  Optionally takes a hash-reference of
 options.  Valid options are C<binmode>, C<count> and C<chomp>.  If C<binmode>
@@ -1151,15 +1170,36 @@ L<MooseX::Types::Path::Tiny>.
 These are other file/path utilities, which may offer a different feature
 set than C<Path::Tiny>.
 
-* L<File::Fu>
-* L<IO::All>
-* L<Path::Class>
+=over 4
+
+=item *
+
+L<File::Fu>
+
+=item *
+
+L<IO::All>
+
+=item *
+
+L<Path::Class>
+
+=back
 
 These iterators may be slightly faster than the recursive iterator in
 C<Path::Tiny>:
 
-* L<Path::Iterator::Rule>
-* L<File::Next>
+=over 4
+
+=item *
+
+L<Path::Iterator::Rule>
+
+=item *
+
+L<File::Next>
+
+=back
 
 There are probably comparable, non-Tiny tools.  Let me know if you want me to
 add a module to the list.
@@ -1198,6 +1238,10 @@ Chris Williams <bingos@cpan.org>
 =item *
 
 David Steinbrunner <dsteinbrunner@pobox.com>
+
+=item *
+
+Gabor Szabo <szabgab@cpan.org>
 
 =item *
 

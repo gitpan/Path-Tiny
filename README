@@ -2,7 +2,7 @@ NAME
     Path::Tiny - File path utility
 
 VERSION
-    version 0.026
+    version 0.027
 
 SYNOPSIS
       use Path::Tiny;
@@ -208,6 +208,14 @@ METHODS
 
     Copies a file using File::Copy's "copy" function.
 
+  digest
+        $obj = path("/tmp/foo.txt")->digest;        # SHA-256
+        $obj = path("/tmp/foo.txt")->digest("MD5"); # user-selected
+
+    Returns a hexadecimal digest for a file. Any arguments are passed to the
+    constructor for Digest to select an algorithm. If no arguments are
+    given, the default is SHA-256.
+
   dirname
         $name = path("/tmp/foo.txt")->dirname; # "/tmp/"
 
@@ -266,6 +274,8 @@ METHODS
         @contents = path("/tmp/foo.txt")->lines(\%options);
         @contents = path("/tmp/foo.txt")->lines_raw;
         @contents = path("/tmp/foo.txt")->lines_utf8;
+
+        @contents = path("/tmp/foo.txt")->lines( { chomp => 1, count => 4 } );
 
     Returns a list of lines from a file. Optionally takes a hash-reference
     of options. Valid options are "binmode", "count" and "chomp". If
@@ -494,12 +504,18 @@ SEE ALSO
     These are other file/path utilities, which may offer a different feature
     set than "Path::Tiny".
 
-    * File::Fu * IO::All * Path::Class
+    *   File::Fu
+
+    *   IO::All
+
+    *   Path::Class
 
     These iterators may be slightly faster than the recursive iterator in
     "Path::Tiny":
 
-    * Path::Iterator::Rule * File::Next
+    *   Path::Iterator::Rule
+
+    *   File::Next
 
     There are probably comparable, non-Tiny tools. Let me know if you want
     me to add a module to the list.
@@ -525,6 +541,8 @@ CONTRIBUTORS
     *   Chris Williams <bingos@cpan.org>
 
     *   David Steinbrunner <dsteinbrunner@pobox.com>
+
+    *   Gabor Szabo <szabgab@cpan.org>
 
     *   George Hartzell <hartzell@cpan.org>
 

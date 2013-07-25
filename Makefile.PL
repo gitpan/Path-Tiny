@@ -22,6 +22,8 @@ my %WriteMakefileArgs = (
   "PREREQ_PM" => {
     "Carp" => 0,
     "Cwd" => 0,
+    "Digest" => "1.03",
+    "Digest::SHA" => "5.45",
     "Exporter" => "5.57",
     "Fcntl" => 0,
     "File::Copy" => 0,
@@ -50,7 +52,7 @@ my %WriteMakefileArgs = (
     "Test::More" => "0.96",
     "open" => 0
   },
-  "VERSION" => "0.026",
+  "VERSION" => "0.027",
   "test" => {
     "TESTS" => "t/*.t"
   }

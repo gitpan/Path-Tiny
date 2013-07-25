@@ -13,6 +13,8 @@ my @modules = qw(
   Carp
   Cwd
   Devel::Hide
+  Digest
+  Digest::SHA
   Exporter
   ExtUtils::MakeMaker
   Fcntl
