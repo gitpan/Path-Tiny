@@ -5,6 +5,7 @@ author:
 build_requires:
   Devel::Hide: 0
   ExtUtils::MakeMaker: 0
+  File::Basename: 0
   File::Find: 0
   File::Spec::Functions: 0
   File::Spec::Unix: 0
@@ -18,7 +19,7 @@ build_requires:
 configure_requires:
   ExtUtils::MakeMaker: 6.30
 dynamic_config: 0
-generated_by: 'Dist::Zilla version 4.300035, CPAN::Meta::Converter version 2.130880'
+generated_by: 'Dist::Zilla version 4.300035, CPAN::Meta::Converter version 2.132140'
 license: apache
 meta-spec:
   url: http://module-build.sourceforge.net/META-spec-v1.4.html
@@ -35,7 +36,7 @@ no_index:
 provides:
   Path::Tiny:
     file: lib/Path/Tiny.pm
-    version: 0.027
+    version: 0.028
 recommends:
   Unicode::UTF8: 0.58
 requires:
@@ -61,7 +62,8 @@ resources:
   bugtracker: https://github.com/dagolden/path-tiny/issues
   homepage: https://metacpan.org/release/Path-Tiny
   repository: git://github.com/dagolden/path-tiny.git
-version: 0.027
+version: 0.028
+x_authority: cpan:DAGOLDEN
 x_contributors:
   - 'Chris Williams <bingos@cpan.org>'
   - 'David Steinbrunner <dsteinbrunner@pobox.com>'

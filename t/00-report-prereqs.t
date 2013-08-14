@@ -18,6 +18,7 @@ my @modules = qw(
   Exporter
   ExtUtils::MakeMaker
   Fcntl
+  File::Basename
   File::Copy
   File::Find
   File::Path

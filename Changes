@@ -1,5 +1,12 @@
 Revision history for Path-Tiny
 
+0.028     2013-08-14 13:12:49 America/New_York
+
+    [ADDED]
+
+    - The 'children()' method now takes an optional regular expression to
+      filter the results
+
 0.027     2013-07-25 19:38:44 America/New_York
 
     [ADDED]

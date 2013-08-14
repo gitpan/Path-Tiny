@@ -2,7 +2,7 @@ NAME
     Path::Tiny - File path utility
 
 VERSION
-    version 0.027
+    version 0.028
 
 SYNOPSIS
       use Path::Tiny;
@@ -199,9 +199,17 @@ METHODS
 
   children
         @paths = path("/tmp")->children;
+        @paths = path("/tmp")->children( qr/\.txt$/ );
 
-    Returns a list of "Path::Tiny" objects for all file and directories
+    Returns a list of "Path::Tiny" objects for all files and directories
     within a directory. Excludes "." and ".." automatically.
+
+    If an optional "qr//" argument is provided, it only returns objects for
+    child names that match the given regular expression. Only the base name
+    is used for matching:
+
+        @paths = path("/tmp")->children( qr/^foo/ );
+        # matches children like the glob foo*
 
   copy
         path("/tmp/foo.txt")->copy("/tmp/bar.txt");

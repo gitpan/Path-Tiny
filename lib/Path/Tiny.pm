@@ -4,7 +4,7 @@ use warnings;
 
 package Path::Tiny;
 # ABSTRACT: File path utility
-our $VERSION = '0.027'; # VERSION
+our $VERSION = '0.028'; # VERSION
 
 # Dependencies
 use autodie::exception 2.14; # autodie::skip support
@@ -223,14 +223,24 @@ sub child {
 }
 
 
-# XXX take a match parameter?  qr or coderef?
 sub children {
-    my ($self) = @_;
+    my ( $self, $filter ) = @_;
     my $dh;
     opendir $dh, $self->[PATH] or _throw( 'opendir', [ $dh, $self->[PATH] ] );
+    my @children = readdir $dh;
+    closedir $dh or _throw( 'closedir', [$dh] );
 
-    return
-      map { path( $self->[PATH] . "/$_" ) } grep { $_ ne '.' && $_ ne '..' } readdir $dh;
+    if ( not defined $filter ) {
+        @children = grep { $_ ne '.' && $_ ne '..' } @children;
+    }
+    elsif ( $filter && ref($filter) eq 'Regexp' ) {
+        @children = grep { $_ ne '.' && $_ ne '..' && $_ =~ $filter } @children;
+    }
+    else {
+        Carp::croak("Invalid argument '$filter' for children()");
+    }
+
+    return map { path( $self->[PATH] . "/$_" ) } @children;
 }
 
 
@@ -627,7 +637,7 @@ Path::Tiny - File path utility
 
 =head1 VERSION
 
-version 0.027
+version 0.028
 
 =head1 SYNOPSIS
 
@@ -835,9 +845,17 @@ file or directories.
 =head2 children
 
     @paths = path("/tmp")->children;
+    @paths = path("/tmp")->children( qr/\.txt$/ );
 
-Returns a list of C<Path::Tiny> objects for all file and directories
+Returns a list of C<Path::Tiny> objects for all files and directories
 within a directory.  Excludes "." and ".." automatically.
+
+If an optional C<qr//> argument is provided, it only returns objects for child
+names that match the given regular expression.  Only the base name is used
+for matching:
+
+    @paths = path("/tmp")->children( qr/^foo/ );
+    # matches children like the glob foo*
 
 =head2 copy
 
