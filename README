@@ -2,7 +2,7 @@ NAME
     Path::Tiny - File path utility
 
 VERSION
-    version 0.028
+    version 0.029
 
 SYNOPSIS
       use Path::Tiny;
@@ -87,6 +87,10 @@ CONSTRUCTORS
     of the path is a tilde followed by a user name then the component will
     be replaced with output of "glob('~username')". Behaviour for
     non-existent users depends on the output of "glob" on the system.
+
+    On Windows, if the path consists of a drive identifier without a path
+    component ("C:" or "D:"), it will be expanded to the absolute path of
+    the current directory on that volume using "Cwd::getdcwd()".
 
   new
         $path = Path::Tiny->new("foo/bar");

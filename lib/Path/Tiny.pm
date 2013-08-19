@@ -4,7 +4,7 @@ use warnings;
 
 package Path::Tiny;
 # ABSTRACT: File path utility
-our $VERSION = '0.028'; # VERSION
+our $VERSION = '0.029'; # VERSION
 
 # Dependencies
 use autodie::exception 2.14; # autodie::skip support
@@ -44,6 +44,30 @@ sub _check_UU {
     eval { require Unicode::UTF8; Unicode::UTF8->VERSION(0.58); 1 };
 }
 
+# notions of "root" directories differ on Win32: \\server\dir\ or C:\ or \
+my $SLASH      = qr{[\\/]};
+my $NOTSLASH   = qr{[^\\/]+};
+my $DRV_VOL    = qr{[a-z]:}i;
+my $UNC_VOL    = qr{$SLASH $SLASH $NOTSLASH $SLASH $NOTSLASH}x;
+my $WIN32_ROOT = qr{(?: $UNC_VOL $SLASH | $DRV_VOL $SLASH | $SLASH )}x;
+
+sub _normalize_win32_path {
+    my ($path) = @_;
+    if ( $path =~ /^$DRV_VOL$/ ) {
+        require Cwd;
+        my $fullpath = Cwd::getdcwd($path); # C: -> C:\some\cwd
+        # getdcwd on non-existent drive returns empty string
+        $path = length $fullpath ? $fullpath : $path . "/";
+    }
+    elsif ( $path =~ /^$UNC_VOL$/ ) {
+        $path .= "/";                       # canonpath currently strips it and we want it
+    }
+    # hack to make splitpath give us a basename; might not be necessary
+    # since canonpath should do this for non-root paths, but I don't trust it
+    $path =~ s{/$}{} if $path !~ /^$WIN32_ROOT$/;
+    return $path;
+}
+
 # we do our own autodie::exceptions to avoid wrapping built-in functions
 sub _throw {
     my ( $function, $args ) = @_;
@@ -59,21 +83,21 @@ sub _throw {
 # cheapo option validation
 sub _get_args {
     my ( $raw, @valid ) = @_;
-    Carp::croak("Options for @{[_called_as()]} must be a hash reference")
-      if defined($raw) && ref($raw) ne 'HASH';
+    if ( defined($raw) && ref($raw) ne 'HASH' ) {
+        my ( undef, undef, undef, $called_as ) = caller(1);
+        $called_as =~ s{^.*::}{};
+        Carp::croak("Options for $called_as must be a hash reference");
+    }
     my $cooked = {};
     for my $k (@valid) {
         $cooked->{$k} = delete $raw->{$k} if exists $raw->{$k};
     }
-    Carp::croak( "Invalid option(s) for @{[_called_as()]}: " . join( ", ", keys %$raw ) )
-      if keys %$raw;
+    if ( keys %$raw ) {
+        my ( undef, undef, undef, $called_as ) = caller(1);
+        $called_as =~ s{^.*::}{};
+        Carp::croak( "Invalid option(s) for $called_as: " . join( ", ", keys %$raw ) );
+    }
     return $cooked;
-}
-
-sub _called_as {
-    my ( undef, undef, undef, $method ) = caller(2);
-    $method =~ s{^.*::}{};
-    return $method;
 }
 
 #--------------------------------------------------------------------------#
@@ -88,12 +112,19 @@ sub path {
     # join stringifies any objects, too, which is handy :-)
     $path = join( "/", ( $path eq '/' ? "" : $path ), @_ ) if @_;
     my $cpath = $path = File::Spec->canonpath($path); # ugh, but probably worth it
-    $path =~ tr[\\][/];                               # unix convention enforced
-    if ( $path =~ m{^(~[^/]*).*} ) {                  # expand a tilde
-        my ($homedir) = glob($1); # glob without list context == heisenbug!
+    if ( $^O eq 'MSWin32' ) {
+        $path = _normalize_win32_path($path);
+    }
+    else {
+        # hack to make splitpath give us a basename; might not be necessary
+        # since canonpath should do this for non-root paths, but I don't trust it
+        $path =~ s{/$}{} if $path ne '/';
+    }
+    $path =~ tr[\\][/]; # unix convention enforced
+    if ( $path =~ m{^(~[^/]*).*} ) { # expand a tilde
+        my ($homedir) = glob($1);    # glob without list context == heisenbug!
         $path =~ s{^(~[^/]*)}{$homedir};
     }
-    $path =~ s{/$}{} if $path ne "/"; # hack to make splitpath give us a basename
     bless [ $path, $cpath ], __PACKAGE__;
 }
 
@@ -254,10 +285,10 @@ sub copy {
 
 
 sub digest {
-    my ($self, $alg, @args) = @_;
+    my ( $self, $alg, @args ) = @_;
     $alg = 'SHA-256' unless defined $alg;
     require Digest;
-    return Digest->new($alg, @args)->add( $self->slurp_raw )->hexdigest;
+    return Digest->new( $alg, @args )->add( $self->slurp_raw )->hexdigest;
 }
 
 
@@ -343,7 +374,7 @@ sub lines {
     my $chomp = $args->{chomp};
     # XXX more efficient to read @lines then chomp(@lines) vs map?
     if ( $args->{count} ) {
-        my (@result, $counter);
+        my ( @result, $counter );
         while ( my $line = <$fh> ) {
             chomp $line if $chomp;
             push @result, $line;
@@ -637,7 +668,7 @@ Path::Tiny - File path utility
 
 =head1 VERSION
 
-version 0.028
+version 0.029
 
 =head1 SYNOPSIS
 
@@ -725,6 +756,10 @@ replaced with the output of C<glob('~')>.  If the first component of the path
 is a tilde followed by a user name then the component will be replaced with
 output of C<glob('~username')>.  Behaviour for non-existent users depends on
 the output of C<glob> on the system.
+
+On Windows, if the path consists of a drive identifier without a path component
+(C<C:> or C<D:>), it will be expanded to the absolute path of the current
+directory on that volume using C<Cwd::getdcwd()>.
 
 =head2 new
 
