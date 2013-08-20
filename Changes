@@ -1,5 +1,12 @@
 Revision history for Path-Tiny
 
+0.030     2013-08-20 16:10:04 America/New_York
+
+    [FIXED]
+
+    - t/zzz-spec.t used getcwd() instead of getdcwd(), which breaks
+      on Windows if the build directory isn't on the 'C' drive
+
 0.029     2013-08-19 11:52:24 America/New_York
 
     [FIXED]

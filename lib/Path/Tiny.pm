@@ -4,7 +4,7 @@ use warnings;
 
 package Path::Tiny;
 # ABSTRACT: File path utility
-our $VERSION = '0.029'; # VERSION
+our $VERSION = '0.030'; # VERSION
 
 # Dependencies
 use autodie::exception 2.14; # autodie::skip support
@@ -668,7 +668,7 @@ Path::Tiny - File path utility
 
 =head1 VERSION
 
-version 0.029
+version 0.030
 
 =head1 SYNOPSIS
 
