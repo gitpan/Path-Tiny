@@ -4,7 +4,7 @@ use warnings;
 
 package Path::Tiny;
 # ABSTRACT: File path utility
-our $VERSION = '0.030'; # VERSION
+our $VERSION = '0.031'; # VERSION
 
 # Dependencies
 use autodie::exception 2.14; # autodie::skip support
@@ -469,7 +469,7 @@ sub parent {
     $self->_splitpath unless defined $self->[FILE];
     my $parent;
     if ( length $self->[FILE] ) {
-        if ( $self->[FILE] eq '.' || $self->[FILE] =~ /\.\./ ) {
+        if ( $self->[FILE] eq '.' || $self->[FILE] eq ".." ) {
             $parent = path( $self->[PATH] . "/.." );
         }
         else {
@@ -477,11 +477,12 @@ sub parent {
         }
     }
     elsif ( length $self->[DIR] ) {
-        if ( $self->[DIR] =~ /\.\./ ) {
+        # because of symlinks, any internal updir requires us to
+        # just add more updirs at the end
+        if ( $self->[DIR] =~ m{(?:^\.\./|/\.\./|/\.\.$)} ) {
             $parent = path( $self->[VOL] . $self->[DIR] . "/.." );
         }
         else {
-            $parent = path("/") if $self->[DIR] eq "/";
             ( my $dir = $self->[DIR] ) =~ s{/[^\/]+/$}{/};
             $parent = path( $self->[VOL] . $dir );
         }
@@ -668,7 +669,7 @@ Path::Tiny - File path utility
 
 =head1 VERSION
 
-version 0.030
+version 0.031
 
 =head1 SYNOPSIS
 
@@ -1295,6 +1296,10 @@ David Steinbrunner <dsteinbrunner@pobox.com>
 =item *
 
 Gabor Szabo <szabgab@cpan.org>
+
+=item *
+
+Gabriel Andrade <gabiruh@gmail.com>
 
 =item *
 

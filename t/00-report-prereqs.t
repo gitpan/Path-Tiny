@@ -10,6 +10,7 @@ use File::Spec::Functions;
 use List::Util qw/max/;
 
 my @modules = qw(
+  Capture::Tiny
   Carp
   Cwd
   Devel::Hide
@@ -20,7 +21,6 @@ my @modules = qw(
   Fcntl
   File::Basename
   File::Copy
-  File::Find
   File::Path
   File::Spec
   File::Spec::Functions
@@ -35,6 +35,7 @@ my @modules = qw(
   Test::More
   Unicode::UTF8
   autodie::exception
+  blib
   constant
   open
   overload
