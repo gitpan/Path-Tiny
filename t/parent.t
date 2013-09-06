@@ -3,6 +3,9 @@ use strict;
 use warnings;
 use Test::More 0.96;
 
+use lib 't/lib';
+use TestUtils qw/exception/;
+
 my $DEBUG;
 BEGIN { $DEBUG = 0 }
 
@@ -62,10 +65,10 @@ while (@cases) {
         my $path = path( shift @$list );
         while (@$list) {
             for my $i ( undef, 0, 1 .. @$list ) {
-                my $n = (defined $i && $i > 0) ? $i : 1;
-                my $expect = $list->[$n-1];
+                my $n      = ( defined $i && $i > 0 ) ? $i : 1;
+                my $expect = $list->[ $n - 1 ];
                 my $got    = $path->parent($i);
-                my $s = defined($i) ? $i : "undef";
+                my $s      = defined($i) ? $i : "undef";
                 is( $got, canonical($expect), "parent($s): $path -> $got" );
                 is( dir("$path")->parent, canonpath($expect), "Path::Class agrees" ) if $DEBUG;
             }

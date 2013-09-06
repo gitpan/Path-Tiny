@@ -4,7 +4,7 @@ use warnings;
 
 package Path::Tiny;
 # ABSTRACT: File path utility
-our $VERSION = '0.031'; # VERSION
+our $VERSION = '0.032'; # VERSION
 
 # Dependencies
 use autodie::exception 2.14; # autodie::skip support
@@ -36,9 +36,12 @@ my $TID = 0; # for thread safe atomic writes
 # don't do that so we have to be sure it's loaded anyway
 sub CLONE { require threads; threads->tid }
 
-sub DOES { return $_[1] eq 'autodie::skip' } # report errors like croak
+sub DOES {
+    return 1 if $_[1] eq 'autodie::skip'; # report errors like croak
+    UNIVERSAL->can('DOES') ? $_[0]->SUPER::DOES( $_[1] ) : $_[0]->isa( $_[1] );
+}
 
-my $HAS_UU;                                  # has Unicode::UTF8; lazily populated
+my $HAS_UU;                               # has Unicode::UTF8; lazily populated
 
 sub _check_UU {
     eval { require Unicode::UTF8; Unicode::UTF8->VERSION(0.58); 1 };
@@ -669,7 +672,7 @@ Path::Tiny - File path utility
 
 =head1 VERSION
 
-version 0.031
+version 0.032
 
 =head1 SYNOPSIS
 
@@ -1265,7 +1268,7 @@ add a module to the list.
 =head2 Bugs / Feature Requests
 
 Please report any bugs or feature requests through the issue tracker
-at L<https://github.com/dagolden/path-tiny/issues>.
+at L<https://github.com/dagolden/Path-Tiny/issues>.
 You will be notified automatically of any progress on your issue.
 
 =head2 Source Code
@@ -1273,9 +1276,9 @@ You will be notified automatically of any progress on your issue.
 This is open source software.  The code repository is available for
 public review and contribution under the terms of the license.
 
-L<https://github.com/dagolden/path-tiny>
+L<https://github.com/dagolden/Path-Tiny>
 
-  git clone git://github.com/dagolden/path-tiny.git
+  git clone https://github.com/dagolden/Path-Tiny.git
 
 =head1 AUTHOR
 
@@ -1320,6 +1323,10 @@ Keedi Kim <keedi@cpan.org>
 =item *
 
 Michael G. Schwern <mschwern@cpan.org>
+
+=item *
+
+Toby Inkster <tobyink@cpan.org>
 
 =back
 

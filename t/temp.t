@@ -2,9 +2,10 @@ use 5.008001;
 use strict;
 use warnings;
 use Test::More 0.96;
-use Test::Deep '!blessed';
 use File::Spec::Unix;
-use File::pushd qw/tempd/;
+
+use lib 't/lib';
+use TestUtils qw/exception tempd/;
 
 use Path::Tiny;
 
@@ -26,29 +27,29 @@ subtest "tempfile" => sub {
 
 subtest "tempdir w/ TEMPLATE" => sub {
     my $tempdir = Path::Tiny->tempdir( TEMPLATE => "helloXXXXX" );
-    like ( $tempdir, qr/hello/, "found template" );
+    like( $tempdir, qr/hello/, "found template" );
 };
 
 subtest "tempfile w/ TEMPLATE" => sub {
     my $tempfile = Path::Tiny->tempfile( TEMPLATE => "helloXXXXX" );
-    like ( $tempfile, qr/hello/, "found template" );
+    like( $tempfile, qr/hello/, "found template" );
 };
 
 subtest "tempdir w/ leading template" => sub {
-    my $tempdir = Path::Tiny->tempdir( "helloXXXXX" );
-    like ( $tempdir, qr/hello/, "found template" );
+    my $tempdir = Path::Tiny->tempdir("helloXXXXX");
+    like( $tempdir, qr/hello/, "found template" );
 };
 
 subtest "tempfile w/ leading template" => sub {
-    my $tempfile = Path::Tiny->tempfile( "helloXXXXX" );
-    like ( $tempfile, qr/hello/, "found template" );
+    my $tempfile = Path::Tiny->tempfile("helloXXXXX");
+    like( $tempfile, qr/hello/, "found template" );
 };
 
 subtest "tempfile handle" => sub {
     my $tempfile = Path::Tiny->tempfile;
     my $fh       = $tempfile->filehandle;
-    is( ref $tempfile->[5], 'File::Temp', "cached File::Temp object" );
-    is( fileno $tempfile->[5], undef, "cached handle is closed" );
+    is( ref $tempfile->[5],    'File::Temp', "cached File::Temp object" );
+    is( fileno $tempfile->[5], undef,        "cached handle is closed" );
 };
 
 subtest "survives absolute" => sub {

@@ -39,23 +39,19 @@ my %WriteMakefileArgs = (
     "warnings" => 0
   },
   "TEST_REQUIRES" => {
-    "Capture::Tiny" => 0,
-    "Devel::Hide" => 0,
     "ExtUtils::MakeMaker" => 0,
     "File::Basename" => 0,
     "File::Spec::Functions" => 0,
     "File::Spec::Unix" => 0,
-    "File::Temp" => 0,
-    "File::pushd" => 0,
+    "File::Temp" => "0.19",
+    "IO::Handle" => 0,
+    "IPC::Open3" => 0,
     "List::Util" => 0,
-    "Test::Deep" => 0,
-    "Test::FailWarnings" => 0,
-    "Test::Fatal" => 0,
     "Test::More" => "0.96",
-    "blib" => 0,
+    "lib" => 0,
     "open" => 0
   },
-  "VERSION" => "0.031",
+  "VERSION" => "0.032",
   "test" => {
     "TESTS" => "t/*.t"
   }

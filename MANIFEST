@@ -6,6 +6,7 @@ META.json
 META.yml
 Makefile.PL
 README
+cpanfile
 dist.ini
 lib/Path/Tiny.pm
 perlcritic.rc
@@ -20,6 +21,7 @@ t/exports.t
 t/filesystem.t
 t/input_output.t
 t/input_output_no_UU.t
+t/lib/TestUtils.pm
 t/mkpath.t
 t/normalize.t
 t/overloading.t

@@ -10,10 +10,8 @@ use File::Spec::Functions;
 use List::Util qw/max/;
 
 my @modules = qw(
-  Capture::Tiny
   Carp
   Cwd
-  Devel::Hide
   Digest
   Digest::SHA
   Exporter
@@ -26,17 +24,16 @@ my @modules = qw(
   File::Spec::Functions
   File::Spec::Unix
   File::Temp
-  File::pushd
   File::stat
+  IO::Handle
+  IPC::Open3
   List::Util
-  Test::Deep
   Test::FailWarnings
-  Test::Fatal
   Test::More
   Unicode::UTF8
   autodie::exception
-  blib
   constant
+  lib
   open
   overload
   perl
