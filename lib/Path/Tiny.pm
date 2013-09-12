@@ -4,7 +4,7 @@ use warnings;
 
 package Path::Tiny;
 # ABSTRACT: File path utility
-our $VERSION = '0.032'; # VERSION
+our $VERSION = '0.033'; # VERSION
 
 # Dependencies
 use autodie::exception 2.14; # autodie::skip support
@@ -29,6 +29,8 @@ use overload (
     bool     => sub () { 1 },
     fallback => 1,
 );
+
+my $IS_BSD = $^O eq 'openbsd' || $^O eq 'freebsd';
 
 my $TID = 0; # for thread safe atomic writes
 
@@ -72,15 +74,34 @@ sub _normalize_win32_path {
 }
 
 # we do our own autodie::exceptions to avoid wrapping built-in functions
+# flock doesn't work on NFS on BSD.  Since program authors often can't control
+# or detect that, we warn once instead of being fatal if we can detect it and
+# people who need it strict can fatalize the 'flock' category
+
+warnings::register_categories('flock') if $IS_BSD;
+my $WARNED_BSD_NFS = 0;
+
 sub _throw {
     my ( $function, $args ) = @_;
-    die autodie::exception->new(
-        function => "CORE::$function",
-        args     => $args,
-        errno    => $!,
-        context  => 'scalar',
-        return   => undef,
-    );
+    if (   $IS_BSD
+        && $function eq 'flock'
+        && $! =~ /operation not supported/i
+        && !warnings::fatal_enabled('flock') )
+    {
+        if ( !$WARNED_BSD_NFS ) {
+            warnings::warn( flock => "No flock for NFS on BSD: continuing in unsafe mode" );
+            $WARNED_BSD_NFS++;
+        }
+    }
+    else {
+        die autodie::exception->new(
+            function => "CORE::$function",
+            args     => $args,
+            errno    => $!,
+            context  => 'scalar',
+            return   => undef,
+        );
+    }
 }
 
 # cheapo option validation
@@ -672,7 +693,7 @@ Path::Tiny - File path utility
 
 =head1 VERSION
 
-version 0.032
+version 0.033
 
 =head1 SYNOPSIS
 
@@ -966,6 +987,13 @@ recursively, breadth-first.  If the C<follow_symlinks> option is also true,
 directory links will be followed recursively.  There is no protection against
 loops when following links.
 
+The default is the same as:
+
+    $iter = path("/tmp")->iterator( {
+        recurse         => 0,
+        follow_symlinks => 0,
+    } );
+
 For a more powerful, recursive iterator with built-in loop avoidance, see
 L<Path::Iterator::Rule>.
 
@@ -1182,6 +1210,16 @@ DOES
 
 =head1 CAVEATS
 
+=head2 NFS and BSD
+
+On BSD, Perl's flock implementation may not work to lock files on an
+NFS filesystem.  Path::Tiny has some heuristics to detect this
+and will warn once and let you continue in an unsafe mode.  If you
+want this failure to be fatal, you can fatalize the 'flock' warnings
+category:
+
+    use warnings FATAL => 'flock';
+
 =head2 utf8 vs UTF-8
 
 All the C<*_utf8> methods use C<:encoding(UTF-8)> -- either as
@@ -1319,6 +1357,10 @@ Karen Etheridge <ether@cpan.org>
 =item *
 
 Keedi Kim <keedi@cpan.org>
+
+=item *
+
+Martin Kjeldsen <mk@bluepipe.dk>
 
 =item *
 

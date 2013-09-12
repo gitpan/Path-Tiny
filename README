@@ -2,7 +2,7 @@ NAME
     Path::Tiny - File path utility
 
 VERSION
-    version 0.032
+    version 0.033
 
 SYNOPSIS
       use Path::Tiny;
@@ -278,6 +278,13 @@ METHODS
     true, directory links will be followed recursively. There is no
     protection against loops when following links.
 
+    The default is the same as:
+
+        $iter = path("/tmp")->iterator( {
+            recurse         => 0,
+            follow_symlinks => 0,
+        } );
+
     For a more powerful, recursive iterator with built-in loop avoidance,
     see Path::Iterator::Rule.
 
@@ -474,6 +481,14 @@ METHODS
     empty string on Unix-like operating systems.
 
 CAVEATS
+  NFS and BSD
+    On BSD, Perl's flock implementation may not work to lock files on an NFS
+    filesystem. Path::Tiny has some heuristics to detect this and will warn
+    once and let you continue in an unsafe mode. If you want this failure to
+    be fatal, you can fatalize the 'flock' warnings category:
+
+        use warnings FATAL => 'flock';
+
   utf8 vs UTF-8
     All the *_utf8 methods use ":encoding(UTF-8)" -- either as
     ":unix:encoding(UTF-8)" (unbuffered) or ":raw:encoding(UTF-8)"
@@ -565,6 +580,8 @@ CONTRIBUTORS
     *   Karen Etheridge <ether@cpan.org>
 
     *   Keedi Kim <keedi@cpan.org>
+
+    *   Martin Kjeldsen <mk@bluepipe.dk>
 
     *   Michael G. Schwern <mschwern@cpan.org>
 

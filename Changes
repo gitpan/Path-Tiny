@@ -1,5 +1,17 @@
 Revision history for Path-Tiny
 
+0.033     2013-09-12 08:54:30 America/New_York
+
+    [FIXED]
+
+    - Perl on BSD may not support locking on an NFS filesystem.  If this is
+      detected, Path::Tiny warns and continues in an unsafe mode.  The
+      'flock' warning category may be fatalized to die instead.
+
+    [DOCUMENTED]
+
+    - Added 'iterator' example showing defaults
+
 0.032     2013-09-06 17:52:48 America/New_York
 
     [PREREQS]
