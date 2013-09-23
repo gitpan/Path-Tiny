@@ -1,5 +1,24 @@
 Revision history for Path-Tiny
 
+0.034     2013-09-23 16:16:36 America/New_York
+
+    [INCOMPATIBLE CHANGE]
+
+    - Exceptions are now Path::Tiny::Error objects, not autodie exceptions;
+      this removes the last dependency on autodie, which allows us to
+      support Perls as far back as v5.8.1
+
+    [FIXED]
+
+    - BSD/NFS flock fix was not backwards compatible before v5.14.  This
+      fixes it harder.
+
+    [PREREQS]
+
+    - dropped autodie
+
+    - lowered ExtUtils::MakeMaker configure_requires version to 6.17
+
 0.033     2013-09-12 08:54:30 America/New_York
 
     [FIXED]

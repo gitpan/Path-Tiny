@@ -4,7 +4,7 @@
       "David Golden <dagolden@cpan.org>"
    ],
    "dynamic_config" : 0,
-   "generated_by" : "Dist::Zilla version 4.300038, CPAN::Meta::Converter version 2.132510",
+   "generated_by" : "Dist::Zilla version 4.300039, CPAN::Meta::Converter version 2.132660",
    "license" : [
       "apache_2_0"
    ],
@@ -27,7 +27,7 @@
    "prereqs" : {
       "configure" : {
          "requires" : {
-            "ExtUtils::MakeMaker" : "6.30"
+            "ExtUtils::MakeMaker" : "6.17"
          }
       },
       "develop" : {
@@ -54,8 +54,8 @@
             "File::Spec" : "3.40",
             "File::Temp" : "0.18",
             "File::stat" : "0",
-            "autodie::exception" : "2.14",
             "constant" : "0",
+            "if" : "0",
             "overload" : "0",
             "perl" : "5.008001",
             "strict" : "0",
@@ -70,6 +70,7 @@
          "requires" : {
             "ExtUtils::MakeMaker" : "0",
             "File::Basename" : "0",
+            "File::Spec" : "0",
             "File::Spec::Functions" : "0",
             "File::Spec::Unix" : "0",
             "File::Temp" : "0.19",
@@ -85,7 +86,15 @@
    "provides" : {
       "Path::Tiny" : {
          "file" : "lib/Path/Tiny.pm",
-         "version" : "0.033"
+         "version" : "0.034"
+      },
+      "Path::Tiny::Error" : {
+         "file" : "lib/Path/Tiny.pm",
+         "version" : "0.034"
+      },
+      "flock" : {
+         "file" : "lib/Path/Tiny.pm",
+         "version" : "0.034"
       }
    },
    "release_status" : "stable",
@@ -100,7 +109,7 @@
          "web" : "https://github.com/dagolden/Path-Tiny"
       }
    },
-   "version" : "0.033",
+   "version" : "0.034",
    "x_authority" : "cpan:DAGOLDEN",
    "x_contributors" : [
       "Chris Williams <bingos@cpan.org>",

@@ -9,8 +9,8 @@ requires "File::Path" => "2.07";
 requires "File::Spec" => "3.40";
 requires "File::Temp" => "0.18";
 requires "File::stat" => "0";
-requires "autodie::exception" => "2.14";
 requires "constant" => "0";
+requires "if" => "0";
 requires "overload" => "0";
 requires "perl" => "5.008001";
 requires "strict" => "0";
@@ -21,6 +21,7 @@ recommends "Unicode::UTF8" => "0.58";
 on 'test' => sub {
   requires "ExtUtils::MakeMaker" => "0";
   requires "File::Basename" => "0";
+  requires "File::Spec" => "0";
   requires "File::Spec::Functions" => "0";
   requires "File::Spec::Unix" => "0";
   requires "File::Temp" => "0.19";
@@ -37,7 +38,7 @@ on 'test' => sub {
 };
 
 on 'configure' => sub {
-  requires "ExtUtils::MakeMaker" => "6.30";
+  requires "ExtUtils::MakeMaker" => "6.17";
 };
 
 on 'develop' => sub {

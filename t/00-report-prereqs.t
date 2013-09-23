@@ -31,8 +31,8 @@ my @modules = qw(
   Test::FailWarnings
   Test::More
   Unicode::UTF8
-  autodie::exception
   constant
+  if
   lib
   open
   overload

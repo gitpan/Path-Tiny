@@ -2,7 +2,7 @@ NAME
     Path::Tiny - File path utility
 
 VERSION
-    version 0.033
+    version 0.034
 
 SYNOPSIS
       use Path::Tiny;
@@ -62,9 +62,6 @@ DESCRIPTION
     The *_utf8 methods ("slurp_utf8", "lines_utf8", etc.) operate in raw
     mode without CRLF translation. Installing Unicode::UTF8 0.58 or later
     will speed up several of them and is highly recommended.
-
-    It uses autodie internally, so most failures will be thrown as
-    exceptions.
 
 CONSTRUCTORS
   path
@@ -479,6 +476,23 @@ METHODS
     Returns the volume portion of the path. This is equivalent equivalent to
     what File::Spec would give from "splitpath" and thus usually is the
     empty string on Unix-like operating systems.
+
+EXCEPTION HANDLING
+    Failures will be thrown as exceptions in the class "Path::Tiny::Error".
+
+    The object will be a hash reference with the following fields:
+
+    *   "op" â a description of the operation, usually function call and
+        any extra info
+
+    *   "file" â the file or directory relating to the error
+
+    *   "err" â hold $! at the time the error was thrown
+
+    *   "msg" â a string combining the above data and a Carp-like short
+        stack trace
+
+    Exception objects will stringify as the "msg" field.
 
 CAVEATS
   NFS and BSD
