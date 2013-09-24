@@ -1,5 +1,12 @@
 Revision history for Path-Tiny
 
+0.035     2013-09-24 07:21:55 America/New_York
+
+    [FIXED]
+
+    - Fixed flock warning on BSD that was broken with the autodie
+      removal; now also applies to all BSD flavors
+
 0.034     2013-09-23 16:16:36 America/New_York
 
     [INCOMPATIBLE CHANGE]
