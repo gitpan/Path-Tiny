@@ -1,5 +1,11 @@
 Revision history for Path-Tiny
 
+0.037     2013-09-25 13:00:25 America/New_York
+
+    [FIXES]
+
+    - Fixed for v5.8
+
 0.036     2013-09-25 09:34:28 America/New_York
 
     [PREREQS]

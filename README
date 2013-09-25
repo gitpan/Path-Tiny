@@ -2,7 +2,7 @@ NAME
     Path::Tiny - File path utility
 
 VERSION
-    version 0.036
+    version 0.037
 
 SYNOPSIS
       use Path::Tiny;
