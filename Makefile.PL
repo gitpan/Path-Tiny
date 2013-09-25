@@ -35,7 +35,6 @@ my %WriteMakefileArgs = (
     "if" => 0,
     "overload" => 0,
     "strict" => 0,
-    "threads" => 0,
     "warnings" => 0
   },
   "TEST_REQUIRES" => {
@@ -52,7 +51,7 @@ my %WriteMakefileArgs = (
     "lib" => 0,
     "open" => 0
   },
-  "VERSION" => "0.035",
+  "VERSION" => "0.036",
   "test" => {
     "TESTS" => "t/*.t"
   }

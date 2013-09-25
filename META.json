@@ -4,7 +4,7 @@
       "David Golden <dagolden@cpan.org>"
    ],
    "dynamic_config" : 0,
-   "generated_by" : "Dist::Zilla version 4.300039, CPAN::Meta::Converter version 2.132660",
+   "generated_by" : "Dist::Zilla version 4.300039, CPAN::Meta::Converter version 2.132620",
    "license" : [
       "apache_2_0"
    ],
@@ -59,7 +59,6 @@
             "overload" : "0",
             "perl" : "5.008001",
             "strict" : "0",
-            "threads" : "0",
             "warnings" : "0"
          }
       },
@@ -86,15 +85,15 @@
    "provides" : {
       "Path::Tiny" : {
          "file" : "lib/Path/Tiny.pm",
-         "version" : "0.035"
+         "version" : "0.036"
       },
       "Path::Tiny::Error" : {
          "file" : "lib/Path/Tiny.pm",
-         "version" : "0.035"
+         "version" : "0.036"
       },
       "flock" : {
          "file" : "lib/Path/Tiny.pm",
-         "version" : "0.035"
+         "version" : "0.036"
       }
    },
    "release_status" : "stable",
@@ -109,7 +108,7 @@
          "web" : "https://github.com/dagolden/Path-Tiny"
       }
    },
-   "version" : "0.035",
+   "version" : "0.036",
    "x_authority" : "cpan:DAGOLDEN",
    "x_contributors" : [
       "Chris Williams <bingos@cpan.org>",

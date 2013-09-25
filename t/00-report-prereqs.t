@@ -38,7 +38,6 @@ my @modules = qw(
   overload
   perl
   strict
-  threads
   warnings
 );
 
