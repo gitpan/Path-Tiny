@@ -29,6 +29,7 @@ realpath
 stringifying
 subclasses
 touchpath
+UNC
 unlinked
 utf
 David

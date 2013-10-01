@@ -4,7 +4,7 @@ use warnings;
 
 package Path::Tiny;
 # ABSTRACT: File path utility
-our $VERSION = '0.037'; # VERSION
+our $VERSION = '0.038'; # VERSION
 
 # Dependencies
 use Exporter 5.57   (qw/import/);
@@ -342,6 +342,13 @@ sub filehandle {
 sub is_absolute { substr( $_[0]->dirname, 0, 1 ) eq '/' }
 
 sub is_relative { substr( $_[0]->dirname, 0, 1 ) ne '/' }
+
+
+sub is_rootdir {
+    my ($self) = @_;
+    $self->_splitpath unless defined $self->[DIR];
+    return $self->[DIR] eq '/' && $self->[FILE] eq '';
+}
 
 
 sub iterator {
@@ -700,7 +707,7 @@ Path::Tiny - File path utility
 
 =head1 VERSION
 
-version 0.037
+version 0.038
 
 =head1 SYNOPSIS
 
@@ -972,6 +979,21 @@ See C<openr>, C<openw>, C<openrw>, and C<opena> for sugar.
 
 Booleans for whether the path appears absolute or relative.
 
+=head2 is_rootdir
+
+    while ( ! $path->is_rootdir ) {
+        $path = $path->parent;
+        ...
+    }
+
+Boolean for whether the path is the root directory of the volume.  I.e. the
+C<dirname> is C<q[/]> and the C<basename> is C<q[]>.
+
+This works even on C<MSWin32> with drives and UNC volumes:
+
+    path("C:/")->is_rootdir;             # true
+    path("//server/share/")->is_rootdir; #true
+
 =head2 iterator
 
     $iter = path("/tmp")->iterator( \%options );
@@ -1203,11 +1225,13 @@ before touching the file.  Returns the path object like C<touch> does.
 
 =head2 volume
 
-    $vol = path("/tmp/foo.txt")->volume;
+    $vol = path("/tmp/foo.txt")->volume;   # ""
+    $vol = path("C:/tmp/foo.txt")->volume; # "C:"
 
 Returns the volume portion of the path.  This is equivalent
 equivalent to what L<File::Spec> would give from C<splitpath> and thus
-usually is the empty string on Unix-like operating systems.
+usually is the empty string on Unix-like operating systems or the
+drive letter for an absolute path on C<MSWin32>.
 
 =for Pod::Coverage openr_utf8 opena_utf8 openw_utf8 openrw_utf8
 openr_raw opena_raw openw_raw openrw_raw

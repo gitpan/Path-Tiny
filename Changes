@@ -1,5 +1,12 @@
 Revision history for Path-Tiny
 
+0.038     2013-10-01 18:20:05 America/New_York
+
+    [ADDITIONS]
+
+    - Added 'is_rootdir' method to simplify testing if a path is
+      the root directory
+
 0.037     2013-09-25 13:00:25 America/New_York
 
     [FIXES]

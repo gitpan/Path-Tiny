@@ -2,7 +2,7 @@ NAME
     Path::Tiny - File path utility
 
 VERSION
-    version 0.037
+    version 0.038
 
 SYNOPSIS
       use Path::Tiny;
@@ -256,6 +256,20 @@ METHODS
 
     Booleans for whether the path appears absolute or relative.
 
+  is_rootdir
+        while ( ! $path->is_rootdir ) {
+            $path = $path->parent;
+            ...
+        }
+
+    Boolean for whether the path is the root directory of the volume. I.e.
+    the "dirname" is "q[/]" and the "basename" is "q[]".
+
+    This works even on "MSWin32" with drives and UNC volumes:
+
+        path("C:/")->is_rootdir;             # true
+        path("//server/share/")->is_rootdir; #true
+
   iterator
         $iter = path("/tmp")->iterator( \%options );
 
@@ -471,11 +485,13 @@ METHODS
     "touch" does.
 
   volume
-        $vol = path("/tmp/foo.txt")->volume;
+        $vol = path("/tmp/foo.txt")->volume;   # ""
+        $vol = path("C:/tmp/foo.txt")->volume; # "C:"
 
     Returns the volume portion of the path. This is equivalent equivalent to
     what File::Spec would give from "splitpath" and thus usually is the
-    empty string on Unix-like operating systems.
+    empty string on Unix-like operating systems or the drive letter for an
+    absolute path on "MSWin32".
 
 EXCEPTION HANDLING
     Failures will be thrown as exceptions in the class "Path::Tiny::Error".
