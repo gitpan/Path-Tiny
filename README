@@ -2,7 +2,7 @@ NAME
     Path::Tiny - File path utility
 
 VERSION
-    version 0.038
+    version 0.039
 
 SYNOPSIS
       use Path::Tiny;
@@ -243,10 +243,17 @@ METHODS
 
   filehandle
         $fh = path("/tmp/foo.txt")->filehandle($mode, $binmode);
+        $fh = path("/tmp/foo.txt")->filehandle({ locked => 1 }, $mode, $binmode);
 
     Returns an open file handle. The $mode argument must be a Perl-style
     read/write mode string ("<" ,">", "<<", etc.). If a $binmode is given,
     it is set during the "open" call.
+
+    An optional hash reference may be used to pass options. The only option
+    is "locked". If true, handles opened for writing, appending or
+    read-write are locked with "LOCK_EX"; otherwise, they are locked with
+    "LOCK_SH". When using "locked", ">" or "+>" modes will delay truncation
+    until after the lock is acquired.
 
     See "openr", "openw", "openrw", and "opena" for sugar.
 
@@ -362,6 +369,15 @@ METHODS
     methods take a single "binmode" argument. All of the "open*" methods
     have "open*_raw" and "open*_utf8" equivalents that use ":raw" and
     ":raw:encoding(UTF-8)", respectively.
+
+    An optional hash reference may be used to pass options. The only option
+    is "locked". If true, handles opened for writing, appending or
+    read-write are locked with "LOCK_EX"; otherwise, they are locked for
+    "LOCK_SH".
+
+        $fh = path("foo.txt")->openrw_utf8( { locked => 1 } );
+
+    See "filehandle" for more on locking.
 
   parent
         $parent = path("foo/bar/baz")->parent; # foo/bar
@@ -547,15 +563,16 @@ CAVEATS
 
   Default IO layers and the open pragma
     If you have Perl 5.10 or later, file input/output methods ("slurp",
-    "spew", etc.) and high-level handle opening methods ( "openr", "openw",
-    etc. but not "filehandle") respect default encodings set by the "-C"
+    "spew", etc.) and high-level handle opening methods ( "filehandle",
+    "openr", "openw", etc. ) respect default encodings set by the "-C"
     switch or lexical open settings of the caller. For UTF-8, this is almost
     certainly slower than using the dedicated "_utf8" methods if you have
     Unicode::UTF8.
 
 TYPE CONSTRAINTS AND COERCION
     A standard MooseX::Types library is available at
-    MooseX::Types::Path::Tiny.
+    MooseX::Types::Path::Tiny. A Type::Tiny equivalent is available as
+    Types::Path::Tiny.
 
 SEE ALSO
     These are other file/path utilities, which may offer a different feature

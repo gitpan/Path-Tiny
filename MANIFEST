@@ -22,6 +22,7 @@ t/filesystem.t
 t/input_output.t
 t/input_output_no_UU.t
 t/lib/TestUtils.pm
+t/locking.t
 t/mkpath.t
 t/normalize.t
 t/overloading.t
