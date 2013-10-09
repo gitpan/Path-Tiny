@@ -4,7 +4,7 @@ use warnings;
 
 package Path::Tiny;
 # ABSTRACT: File path utility
-our $VERSION = '0.039'; # VERSION
+our $VERSION = '0.040'; # VERSION
 
 # Dependencies
 use Exporter 5.57   (qw/import/);
@@ -344,7 +344,9 @@ sub filehandle {
             # fix up the binmode since sysopen() can't specify layers like
             # open() and binmode() can't start with just :unix like open()
             if ( $binmode =~ s/^:unix// ) {
-                # strip off layers until only :unix is left
+                # eliminate pseudo-layers
+                binmode( $fh, ":raw" ) or $self->_throw("binmode (:raw)");
+                # strip off real layers until only :unix is left
                 while ( 1 < ( my $layers =()= PerlIO::get_layers( $fh, output => 1 ) ) ) {
                     binmode( $fh, ":pop" ) or $self->_throw("binmode (:pop)");
                 }
@@ -748,7 +750,7 @@ Path::Tiny - File path utility
 
 =head1 VERSION
 
-version 0.039
+version 0.040
 
 =head1 SYNOPSIS
 
@@ -1459,6 +1461,10 @@ Gabriel Andrade <gabiruh@gmail.com>
 =item *
 
 George Hartzell <hartzell@cpan.org>
+
+=item *
+
+Geraud Continsouzas <geraud@scsi.nc>
 
 =item *
 

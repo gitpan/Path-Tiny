@@ -85,15 +85,15 @@
    "provides" : {
       "Path::Tiny" : {
          "file" : "lib/Path/Tiny.pm",
-         "version" : "0.039"
+         "version" : "0.040"
       },
       "Path::Tiny::Error" : {
          "file" : "lib/Path/Tiny.pm",
-         "version" : "0.039"
+         "version" : "0.040"
       },
       "flock" : {
          "file" : "lib/Path/Tiny.pm",
-         "version" : "0.039"
+         "version" : "0.040"
       }
    },
    "release_status" : "stable",
@@ -108,7 +108,7 @@
          "web" : "https://github.com/dagolden/Path-Tiny"
       }
    },
-   "version" : "0.039",
+   "version" : "0.040",
    "x_authority" : "cpan:DAGOLDEN",
    "x_contributors" : [
       "Chris Williams <bingos@cpan.org>",
@@ -116,6 +116,7 @@
       "Gabor Szabo <szabgab@cpan.org>",
       "Gabriel Andrade <gabiruh@gmail.com>",
       "George Hartzell <hartzell@cpan.org>",
+      "Geraud Continsouzas <geraud@scsi.nc>",
       "Goro Fuji <gfuji@cpan.org>",
       "Karen Etheridge <ether@cpan.org>",
       "Keedi Kim <keedi@cpan.org>",
