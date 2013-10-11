@@ -10,7 +10,6 @@ cpanfile
 dist.ini
 lib/Path/Tiny.pm
 perlcritic.rc
-t/00-compile.t
 t/00-report-prereqs.t
 t/README
 t/basic.t

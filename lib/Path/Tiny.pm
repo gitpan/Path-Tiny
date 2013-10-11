@@ -4,7 +4,7 @@ use warnings;
 
 package Path::Tiny;
 # ABSTRACT: File path utility
-our $VERSION = '0.040'; # VERSION
+our $VERSION = '0.041'; # VERSION
 
 # Dependencies
 use Exporter 5.57   (qw/import/);
@@ -750,7 +750,7 @@ Path::Tiny - File path utility
 
 =head1 VERSION
 
-version 0.040
+version 0.041
 
 =head1 SYNOPSIS
 

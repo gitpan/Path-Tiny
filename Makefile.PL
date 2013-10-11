@@ -40,18 +40,15 @@ my %WriteMakefileArgs = (
   "TEST_REQUIRES" => {
     "ExtUtils::MakeMaker" => 0,
     "File::Basename" => 0,
-    "File::Spec" => 0,
     "File::Spec::Functions" => 0,
     "File::Spec::Unix" => 0,
     "File::Temp" => "0.19",
-    "IO::Handle" => 0,
-    "IPC::Open3" => 0,
     "List::Util" => 0,
     "Test::More" => "0.96",
     "lib" => 0,
     "open" => 0
   },
-  "VERSION" => "0.040",
+  "VERSION" => "0.041",
   "test" => {
     "TESTS" => "t/*.t"
   }

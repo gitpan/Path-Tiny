@@ -25,8 +25,6 @@ my @modules = qw(
   File::Spec::Unix
   File::Temp
   File::stat
-  IO::Handle
-  IPC::Open3
   List::Util
   Test::FailWarnings
   Test::More
