@@ -2,7 +2,7 @@ NAME
     Path::Tiny - File path utility
 
 VERSION
-    version 0.041
+    version 0.042
 
 SYNOPSIS
       use Path::Tiny;
@@ -397,6 +397,11 @@ METHODS
     Returns a new "Path::Tiny" object with all symbolic links and upward
     directory parts resolved using Cwd's "realpath". Compared to "absolute",
     this is more expensive as it must actually consult the filesystem.
+
+    If the path can't be resolved (e.g. if it includes directories that
+    don't exist), an exception will be thrown:
+
+        $real = path("doesnt_exist/foo")->realpath; # dies
 
   relative
         $rel = path("/tmp/foo/bar")->relative("/tmp"); # foo/bar

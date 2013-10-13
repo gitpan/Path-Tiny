@@ -4,7 +4,7 @@ use warnings;
 
 package Path::Tiny;
 # ABSTRACT: File path utility
-our $VERSION = '0.041'; # VERSION
+our $VERSION = '0.042'; # VERSION
 
 # Dependencies
 use Exporter 5.57   (qw/import/);
@@ -54,14 +54,21 @@ my $WIN32_ROOT = qr{(?: $UNC_VOL $SLASH | $DRV_VOL $SLASH | $SLASH )}x;
 
 sub _normalize_win32_path {
     my ($path) = @_;
-    if ( $path =~ /^$DRV_VOL$/ ) {
+    # could be C: or C:foo; have to expand C: either way
+    if ( $path =~ m{^($DRV_VOL)(?:[^\\/]|$)} ) {
+        my $drv = $1;
         require Cwd;
-        my $fullpath = Cwd::getdcwd($path); # C: -> C:\some\cwd
+        my $dcwd = Cwd::getdcwd($drv); # C: -> C:\some\cwd
         # getdcwd on non-existent drive returns empty string
-        $path = length $fullpath ? $fullpath : $path . "/";
+        # so just use the original drive Z: -> Z:
+        $dcwd = "$drv" unless length $dcwd;
+        # normalize slashes: migth be C:\some\cwd or D:\ or Z:
+        $dcwd =~ s{[\\/]?$}{/};
+        # make the path absolute with dcwd
+        $path =~ s{^$DRV_VOL}{$dcwd};
     }
     elsif ( $path =~ /^$UNC_VOL$/ ) {
-        $path .= "/";                       # canonpath currently strips it and we want it
+        $path .= "/"; # canonpath currently strips it and we want it
     }
     # hack to make splitpath give us a basename; might not be necessary
     # since canonpath should do this for non-root paths, but I don't trust it
@@ -575,8 +582,11 @@ sub _non_empty {
 
 
 sub realpath {
+    my $self = shift;
     require Cwd;
-    return path( Cwd::realpath( $_[0]->[PATH] ) );
+    my $realpath = eval { Cwd::realpath( $self->[PATH] ) };
+    $self->_throw("resolving realpath") unless defined $realpath and length $realpath;
+    return path($realpath);
 }
 
 
@@ -750,7 +760,7 @@ Path::Tiny - File path utility
 
 =head1 VERSION
 
-version 0.041
+version 0.042
 
 =head1 SYNOPSIS
 
@@ -1171,6 +1181,11 @@ C<parent(1)>.
 Returns a new C<Path::Tiny> object with all symbolic links and upward directory
 parts resolved using L<Cwd>'s C<realpath>.  Compared to C<absolute>, this is
 more expensive as it must actually consult the filesystem.
+
+If the path can't be resolved (e.g. if it includes directories that don't exist),
+an exception will be thrown:
+
+    $real = path("doesnt_exist/foo")->realpath; # dies
 
 =head2 relative
 
