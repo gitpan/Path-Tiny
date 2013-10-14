@@ -2,7 +2,7 @@ NAME
     Path::Tiny - File path utility
 
 VERSION
-    version 0.042
+    version 0.043
 
 SYNOPSIS
       use Path::Tiny;
@@ -150,14 +150,18 @@ METHODS
         $abs = path("foo/bar")->absolute;
         $abs = path("foo/bar")->absolute("/tmp");
 
-    Returns a new "Path::Tiny" object with an absolute path. Unless an
-    argument is given, the current directory is used as the absolute base
-    path. The argument must be absolute or you won't get an absolute result.
+    Returns a new "Path::Tiny" object with an absolute path (or itself if
+    already absolute). Unless an argument is given, the current directory is
+    used as the absolute base path. The argument must be absolute or you
+    won't get an absolute result.
 
     This will not resolve upward directories ("foo/../bar") unless
     "canonpath" in File::Spec would normally do so on your platform. If you
     need them resolved, you must call the more expensive "realpath" method
     instead.
+
+    On Windows, an absolute path without a volume component will have it
+    added based on the current drive.
 
   append, append_raw, append_utf8
         path("foo.txt")->append(@data);

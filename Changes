@@ -1,5 +1,18 @@
 Revision history for Path-Tiny
 
+0.043     2013-10-14 06:24:06 America/New_York
+
+    [CHANGED]
+
+    - Calling 'absolute' on Windows will add the volume if it is missing
+      (E.g. "/foo" will become "C:/foo").  This matches the behavior
+      of File::Spec->rel2abs.
+
+    [FIXED]
+
+    - Fixed t/00-report-prereqs.t for use with older versions of
+      CPAN::Meta::Reporter
+
 0.042     2013-10-13 11:02:02 America/New_York
 
     [FIXED]
