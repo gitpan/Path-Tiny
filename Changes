@@ -1,5 +1,18 @@
 Revision history for Path-Tiny
 
+0.044     2013-10-17 17:00:41 America/New_York
+
+    [FIXED]
+
+    - Fixed child path construction against the root path.
+
+    - Fixed path construction when a relative volume is provided as the
+      first argument on Windows; e.g. path("C:", "lib") must be like
+      path("C:lib"), not path("C:/lib").
+
+    - On AIX, shared locking is replaced by exclusive locking on a R/W
+      filehandle, as locking read handles is not supported
+
 0.043     2013-10-14 06:24:06 America/New_York
 
     [CHANGED]
@@ -11,7 +24,7 @@ Revision history for Path-Tiny
     [FIXED]
 
     - Fixed t/00-report-prereqs.t for use with older versions of
-      CPAN::Meta::Reporter
+      CPAN::Meta::Requirements
 
 0.042     2013-10-13 11:02:02 America/New_York
 

@@ -4,7 +4,7 @@ use warnings;
 
 package Path::Tiny;
 # ABSTRACT: File path utility
-our $VERSION = '0.043'; # VERSION
+our $VERSION = '0.044'; # VERSION
 
 # Dependencies
 use Exporter 5.57   (qw/import/);
@@ -15,12 +15,14 @@ our @EXPORT    = qw/path/;
 our @EXPORT_OK = qw/cwd rootdir tempfile tempdir/;
 
 use constant {
-    PATH  => 0,
-    CANON => 1,
-    VOL   => 2,
-    DIR   => 3,
-    FILE  => 4,
-    TEMP  => 5,
+    PATH     => 0,
+    CANON    => 1,
+    VOL      => 2,
+    DIR      => 3,
+    FILE     => 4,
+    TEMP     => 5,
+    IS_BSD   => ( scalar $^O =~ /bsd$/ ),
+    IS_WIN32 => ( $^O eq 'MSWin32' ),
 };
 
 use overload (
@@ -28,10 +30,6 @@ use overload (
     bool     => sub () { 1 },
     fallback => 1,
 );
-
-my $IS_BSD;
-
-BEGIN { $IS_BSD = $^O =~ /bsd$/ }
 
 # if cloning, threads should already be loaded, but Win32 pseudoforks
 # don't do that so we have to be sure it's loaded anyway
@@ -52,32 +50,24 @@ my $DRV_VOL    = qr{[a-z]:}i;
 my $UNC_VOL    = qr{$SLASH $SLASH $NOTSLASH+ $SLASH $NOTSLASH+}x;
 my $WIN32_ROOT = qr{(?: $UNC_VOL $SLASH | $DRV_VOL $SLASH | $SLASH )}x;
 
-sub _normalize_win32_path {
-    my ($path) = @_;
-
-    # have to fix up three cases:
-    # (1) could be C: or C:foo; have to expand C: either way
-    if ( $path =~ m{^($DRV_VOL)(?:$NOTSLASH|$)} ) {
-        my $drv = $1;
-        require Cwd;
-        my $dcwd = Cwd::getdcwd($drv); # C: -> C:\some\cwd
-        # getdcwd on non-existent drive returns empty string
-        # so just use the original drive Z: -> Z:
-        $dcwd = "$drv" unless length $dcwd;
-        # normalize slashes: migth be C:\some\cwd or D:\ or Z:
-        $dcwd =~ s{$SLASH?$}{/};
-        # make the path absolute with dcwd
-        $path =~ s{^$DRV_VOL}{$dcwd};
-    }
-    # (2) could be //server/mount
-    elsif ( $path =~ /^$UNC_VOL$/ ) {
-        $path .= "/"; # canonpath currently strips it and we want it
-    }
-
-    # hack to make splitpath give us a basename; might not be necessary
-    # since canonpath should do this for non-root paths, but I don't trust it
-    $path =~ s{/$}{} if $path !~ /^$WIN32_ROOT$/;
+sub _win32_vol {
+    my ( $path, $drv ) = @_;
+    require Cwd;
+    my $dcwd = Cwd::getdcwd($drv); # C: -> C:\some\cwd
+    # getdcwd on non-existent drive returns empty string
+    # so just use the original drive Z: -> Z:
+    $dcwd = "$drv" unless length $dcwd;
+    # normalize dwcd to end with a slash: might be C:\some\cwd or D:\ or Z:
+    $dcwd =~ s{$SLASH?$}{/};
+    # make the path absolute with dcwd
+    $path =~ s{^$DRV_VOL}{$dcwd};
     return $path;
+}
+
+# This is a string test for before we have the object; see is_rootdir for well-formed
+# object test
+sub _is_root {
+    return IS_WIN32() ? ( $_[0] =~ /^$WIN32_ROOT$/ ) : ( $_[0] eq '/' );
 }
 
 # flock doesn't work on NFS on BSD.  Since program authors often can't control
@@ -85,14 +75,14 @@ sub _normalize_win32_path {
 # people who need it strict can fatalize the 'flock' category
 
 #<<< No perltidy
-{ package flock; use if $IS_BSD, 'warnings::register' }
+{ package flock; use if Path::Tiny::IS_BSD(), 'warnings::register' }
 #>>>
 
 my $WARNED_BSD_NFS = 0;
 
 sub _throw {
     my ( $self, $function, $file ) = @_;
-    if (   $IS_BSD
+    if (   IS_BSD()
         && $function =~ /^flock/
         && $! =~ /operation not supported/i
         && !warnings::fatal_enabled('flock') )
@@ -137,22 +127,42 @@ sub path {
     my $path = shift;
     Carp::croak("path() requires a defined, positive-length argument")
       unless defined $path && length $path;
-    # join stringifies any objects, too, which is handy :-)
-    $path = join( "/", ( $path eq '/' ? "" : $path ), @_ ) if @_;
+
+    # stringify initial path
+    $path = "$path";
+
+    # expand relative volume paths on windows; put trailing slash on UNC root
+    if ( IS_WIN32() ) {
+        $path = _win32_vol( $path, $1 ) if $path =~ m{^($DRV_VOL)(?:$NOTSLASH|$)};
+        $path .= "/" if $path =~ m{^$UNC_VOL$};
+    }
+
+    # concatenate more arguments (stringifies any objects, too)
+    if (@_) {
+        $path .= ( _is_root($path) ? "" : "/" ) . join( "/", @_ );
+    }
+
+    # canonicalize paths
     my $cpath = $path = File::Spec->canonpath($path); # ugh, but probably worth it
-    if ( $^O eq 'MSWin32' ) {
-        $path = _normalize_win32_path($path);
+    $path =~ tr[\\][/];                               # unix convention enforced
+    $path .= "/" if IS_WIN32() && $path =~ m{^$UNC_VOL$}; # canonpath strips it
+
+    # hack to make splitpath give us a basename; root paths must always have
+    # a trailing slash, but other paths must not
+    if ( _is_root($path) ) {
+        $path =~ s{/?$}{/};
     }
     else {
-        # hack to make splitpath give us a basename; might not be necessary
-        # since canonpath should do this for non-root paths, but I don't trust it
-        $path =~ s{/$}{} if $path ne '/';
+        $path =~ s{/$}{};
     }
-    $path =~ tr[\\][/]; # unix convention enforced
-    if ( $path =~ m{^(~[^/]*).*} ) { # expand a tilde
-        my ($homedir) = glob($1);    # glob without list context == heisenbug!
+
+    # do any tilde expansions
+    if ( $path =~ m{^(~[^/]*).*} ) {
+        my ($homedir) = glob($1); # glob without list context == heisenbug!
         $path =~ s{^(~[^/]*)}{$homedir};
     }
+
+    # and we're finally done
     bless [ $path, $cpath ], __PACKAGE__;
 }
 
@@ -226,7 +236,7 @@ sub absolute {
     my ( $self, $base ) = @_;
 
     # absolute paths handled differently by OS
-    if ( $^O eq "MSWin32" ) {
+    if (IS_WIN32) {
         return $self if length $self->volume;
         # add missing volume
         if ( $self->is_absolute ) {
@@ -241,7 +251,7 @@ sub absolute {
 
     # relative path on any OS
     require Cwd;
-    return path( join "/", ( defined($base) ? $base : Cwd::getcwd() ), $_[0]->[PATH] );
+    return path( ( defined($base) ? $base : Cwd::getcwd() ), $_[0]->[PATH] );
 }
 
 
@@ -282,8 +292,7 @@ sub canonpath { $_[0]->[CANON] }
 
 sub child {
     my ( $self, @parts ) = @_;
-    my $path = $self->[PATH];
-    return path( join( "/", ( $path eq '/' ? "" : $path ), @parts ) );
+    return path( $self->[PATH], @parts );
 }
 
 
@@ -304,7 +313,7 @@ sub children {
         Carp::croak("Invalid argument '$filter' for children()");
     }
 
-    return map { path( $self->[PATH] . "/$_" ) } @children;
+    return map { path( $self->[PATH], $_ ) } @children;
 }
 
 
@@ -385,6 +394,11 @@ sub filehandle {
             # ask for lock and truncation
             $lock  = Fcntl::LOCK_EX();
             $trunc = 1;
+        }
+        elsif ( $^O eq 'aix' && $opentype eq "<" ) {
+            # AIX can only lock write handles, so upgrade to RW and LOCK_EX
+            $opentype = "+<";
+            $lock     = Fcntl::LOCK_EX();
         }
         else {
             $lock = $opentype eq "<" ? Fcntl::LOCK_SH() : Fcntl::LOCK_EX();
@@ -778,7 +792,7 @@ Path::Tiny - File path utility
 
 =head1 VERSION
 
-version 0.043
+version 0.044
 
 =head1 SYNOPSIS
 
@@ -1330,7 +1344,7 @@ drive letter for an absolute path on C<MSWin32>.
 
 =for Pod::Coverage openr_utf8 opena_utf8 openw_utf8 openrw_utf8
 openr_raw opena_raw openw_raw openrw_raw
-DOES
+IS_BSD IS_WIN32
 
 =head1 EXCEPTION HANDLING
 
@@ -1371,6 +1385,12 @@ want this failure to be fatal, you can fatalize the 'flock' warnings
 category:
 
     use warnings FATAL => 'flock';
+
+=head2 AIX and locking
+
+AIX requires a write handle for locking.  Therefore, calls that normally
+open a read handle and take a shared lock instead will open a read-write
+handle and take an exclusive lock.
 
 =head2 utf8 vs UTF-8
 

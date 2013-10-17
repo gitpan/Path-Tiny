@@ -2,7 +2,7 @@ NAME
     Path::Tiny - File path utility
 
 VERSION
-    version 0.043
+    version 0.044
 
 SYNOPSIS
       use Path::Tiny;
@@ -543,6 +543,11 @@ CAVEATS
     be fatal, you can fatalize the 'flock' warnings category:
 
         use warnings FATAL => 'flock';
+
+  AIX and locking
+    AIX requires a write handle for locking. Therefore, calls that normally
+    open a read handle and take a shared lock instead will open a read-write
+    handle and take an exclusive lock.
 
   utf8 vs UTF-8
     All the *_utf8 methods use ":encoding(UTF-8)" -- either as

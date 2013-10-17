@@ -69,6 +69,8 @@
       },
       "test" : {
          "recommends" : {
+            "CPAN::Meta" : "0",
+            "CPAN::Meta::Requirements" : "0",
             "Test::FailWarnings" : "0"
          },
          "requires" : {
@@ -87,15 +89,15 @@
    "provides" : {
       "Path::Tiny" : {
          "file" : "lib/Path/Tiny.pm",
-         "version" : "0.043"
+         "version" : "0.044"
       },
       "Path::Tiny::Error" : {
          "file" : "lib/Path/Tiny.pm",
-         "version" : "0.043"
+         "version" : "0.044"
       },
       "flock" : {
          "file" : "lib/Path/Tiny.pm",
-         "version" : "0.043"
+         "version" : "0.044"
       }
    },
    "release_status" : "stable",
@@ -110,7 +112,7 @@
          "web" : "https://github.com/dagolden/Path-Tiny"
       }
    },
-   "version" : "0.043",
+   "version" : "0.044",
    "x_authority" : "cpan:DAGOLDEN",
    "x_contributors" : [
       "Chris Williams <bingos@cpan.org>",
