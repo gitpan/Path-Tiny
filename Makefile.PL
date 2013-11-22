@@ -29,7 +29,7 @@ my %WriteMakefileArgs = (
     "File::Copy" => 0,
     "File::Path" => "2.07",
     "File::Spec" => "3.40",
-    "File::Temp" => "0.18",
+    "File::Temp" => "0.19",
     "File::stat" => 0,
     "constant" => 0,
     "if" => 0,
@@ -48,37 +48,45 @@ my %WriteMakefileArgs = (
     "lib" => 0,
     "open" => 0
   },
-  "VERSION" => "0.044",
+  "VERSION" => "0.045",
   "test" => {
     "TESTS" => "t/*.t"
   }
 );
 
 
-unless ( eval { ExtUtils::MakeMaker->VERSION(6.63_03) } ) {
-  my $tr = delete $WriteMakefileArgs{TEST_REQUIRES};
-  my $br = $WriteMakefileArgs{BUILD_REQUIRES};
-  for my $mod ( keys %$tr ) {
-    if ( exists $br->{$mod} ) {
-      $br->{$mod} = $tr->{$mod} if $tr->{$mod} > $br->{$mod};
-    }
-    else {
-      $br->{$mod} = $tr->{$mod};
-    }
-  }
-}
+my %FallbackPrereqs = (
+  "Carp" => 0,
+  "Cwd" => 0,
+  "Digest" => "1.03",
+  "Digest::SHA" => "5.45",
+  "Exporter" => "5.57",
+  "ExtUtils::MakeMaker" => 0,
+  "Fcntl" => 0,
+  "File::Basename" => 0,
+  "File::Copy" => 0,
+  "File::Path" => "2.07",
+  "File::Spec" => "3.40",
+  "File::Spec::Functions" => 0,
+  "File::Spec::Unix" => 0,
+  "File::Temp" => "0.19",
+  "File::stat" => 0,
+  "List::Util" => 0,
+  "Test::More" => "0.96",
+  "constant" => 0,
+  "if" => 0,
+  "lib" => 0,
+  "open" => 0,
+  "overload" => 0,
+  "strict" => 0,
+  "warnings" => 0
+);
 
-unless ( eval { ExtUtils::MakeMaker->VERSION(6.56) } ) {
-  my $br = delete $WriteMakefileArgs{BUILD_REQUIRES};
-  my $pp = $WriteMakefileArgs{PREREQ_PM};
-  for my $mod ( keys %$br ) {
-    if ( exists $pp->{$mod} ) {
-      $pp->{$mod} = $br->{$mod} if $br->{$mod} > $pp->{$mod};
-    }
-    else {
-      $pp->{$mod} = $br->{$mod};
-    }
-  }
+
+unless ( eval { ExtUtils::MakeMaker->VERSION(6.63_03) } ) {
+  delete $WriteMakefileArgs{TEST_REQUIRES};
+  delete $WriteMakefileArgs{BUILD_REQUIRES};
+  $WriteMakefileArgs{PREREQ_PM} = \%FallbackPrereqs;
 }
 
 delete $WriteMakefileArgs{CONFIGURE_REQUIRES}

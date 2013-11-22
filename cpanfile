@@ -7,7 +7,7 @@ requires "Fcntl" => "0";
 requires "File::Copy" => "0";
 requires "File::Path" => "2.07";
 requires "File::Spec" => "3.40";
-requires "File::Temp" => "0.18";
+requires "File::Temp" => "0.19";
 requires "File::stat" => "0";
 requires "constant" => "0";
 requires "if" => "0";
@@ -40,6 +40,12 @@ on 'configure' => sub {
 };
 
 on 'develop' => sub {
+  requires "Dist::Zilla" => "5.006";
+  requires "Dist::Zilla::Plugin::MakeMaker" => "0";
+  requires "Dist::Zilla::Plugin::OnlyCorePrereqs" => "0";
+  requires "Dist::Zilla::Plugin::Prereqs" => "0";
+  requires "Dist::Zilla::Plugin::RemovePrereqs" => "0";
+  requires "Dist::Zilla::PluginBundle::DAGOLDEN" => "0.055";
   requires "File::Spec" => "0";
   requires "File::Temp" => "0";
   requires "IO::Handle" => "0";

@@ -1,5 +1,11 @@
 Revision history for Path-Tiny
 
+0.045     2013-11-22 15:28:50 America/New_York
+
+    [FIXED]
+
+    - Fixed locking test on AIX
+
 0.044     2013-10-17 17:00:41 America/New_York
 
     [FIXED]

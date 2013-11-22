@@ -4,7 +4,7 @@
       "David Golden <dagolden@cpan.org>"
    ],
    "dynamic_config" : 0,
-   "generated_by" : "Dist::Zilla version 4.300039, CPAN::Meta::Converter version 2.132830",
+   "generated_by" : "Dist::Zilla version 5.006, CPAN::Meta::Converter version 2.132830",
    "license" : [
       "apache_2_0"
    ],
@@ -32,6 +32,12 @@
       },
       "develop" : {
          "requires" : {
+            "Dist::Zilla" : "5.006",
+            "Dist::Zilla::Plugin::MakeMaker" : "0",
+            "Dist::Zilla::Plugin::OnlyCorePrereqs" : "0",
+            "Dist::Zilla::Plugin::Prereqs" : "0",
+            "Dist::Zilla::Plugin::RemovePrereqs" : "0",
+            "Dist::Zilla::PluginBundle::DAGOLDEN" : "0.055",
             "File::Spec" : "0",
             "File::Temp" : "0",
             "IO::Handle" : "0",
@@ -57,7 +63,7 @@
             "File::Copy" : "0",
             "File::Path" : "2.07",
             "File::Spec" : "3.40",
-            "File::Temp" : "0.18",
+            "File::Temp" : "0.19",
             "File::stat" : "0",
             "constant" : "0",
             "if" : "0",
@@ -89,15 +95,15 @@
    "provides" : {
       "Path::Tiny" : {
          "file" : "lib/Path/Tiny.pm",
-         "version" : "0.044"
+         "version" : "0.045"
       },
       "Path::Tiny::Error" : {
          "file" : "lib/Path/Tiny.pm",
-         "version" : "0.044"
+         "version" : "0.045"
       },
       "flock" : {
          "file" : "lib/Path/Tiny.pm",
-         "version" : "0.044"
+         "version" : "0.045"
       }
    },
    "release_status" : "stable",
@@ -112,7 +118,7 @@
          "web" : "https://github.com/dagolden/Path-Tiny"
       }
    },
-   "version" : "0.044",
+   "version" : "0.045",
    "x_authority" : "cpan:DAGOLDEN",
    "x_contributors" : [
       "Chris Williams <bingos@cpan.org>",
@@ -126,7 +132,8 @@
       "Keedi Kim <keedi@cpan.org>",
       "Martin Kjeldsen <mk@bluepipe.dk>",
       "Michael G. Schwern <mschwern@cpan.org>",
-      "Toby Inkster <tobyink@cpan.org>"
+      "Toby Inkster <tobyink@cpan.org>",
+      "\uae40\ub3c4\ud615 - Keedi Kim <keedi@cpan.org>"
    ]
 }
 
