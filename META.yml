@@ -32,13 +32,13 @@ no_index:
 provides:
   Path::Tiny:
     file: lib/Path/Tiny.pm
-    version: 0.046
+    version: 0.047
   Path::Tiny::Error:
     file: lib/Path/Tiny.pm
-    version: 0.046
+    version: 0.047
   flock:
     file: lib/Path/Tiny.pm
-    version: 0.046
+    version: 0.047
 recommends:
   Unicode::UTF8: 0.58
 requires:
@@ -63,7 +63,7 @@ resources:
   bugtracker: https://github.com/dagolden/Path-Tiny/issues
   homepage: https://github.com/dagolden/Path-Tiny
   repository: https://github.com/dagolden/Path-Tiny.git
-version: 0.046
+version: 0.047
 x_authority: cpan:DAGOLDEN
 x_contributors:
   - 'Chris Williams <bingos@cpan.org>'

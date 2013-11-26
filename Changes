@@ -1,5 +1,12 @@
 Revision history for Path-Tiny
 
+0.047     2013-11-26 15:11:13 America/New_York
+
+    [FIXED]
+
+    - Previous lock testing fixes broke on Windows (sigh); now fixed,
+      I hope.
+
 0.046     2013-11-22 17:07:24 America/New_York
 
     [FIXED]
