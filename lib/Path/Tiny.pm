@@ -4,7 +4,7 @@ use warnings;
 
 package Path::Tiny;
 # ABSTRACT: File path utility
-our $VERSION = '0.047'; # VERSION
+our $VERSION = '0.048'; # VERSION
 
 # Dependencies
 use Config;
@@ -56,10 +56,10 @@ my $WIN32_ROOT = qr{(?: $UNC_VOL $SLASH | $DRV_VOL $SLASH | $SLASH )}x;
 sub _win32_vol {
     my ( $path, $drv ) = @_;
     require Cwd;
-    my $dcwd = Cwd::getdcwd($drv); # C: -> C:\some\cwd
+    my $dcwd = eval { Cwd::getdcwd($drv) }; # C: -> C:\some\cwd
     # getdcwd on non-existent drive returns empty string
     # so just use the original drive Z: -> Z:
-    $dcwd = "$drv" unless length $dcwd;
+    $dcwd = "$drv" unless defined $dcwd && length $dcwd;
     # normalize dwcd to end with a slash: might be C:\some\cwd or D:\ or Z:
     $dcwd =~ s{$SLASH?$}{/};
     # make the path absolute with dcwd
@@ -244,7 +244,9 @@ sub absolute {
         # add missing volume
         if ( $self->is_absolute ) {
             require Cwd;
-            my ($drv) = Cwd::getdcwd() =~ /^($DRV_VOL | $UNC_VOL)/x;
+            # use Win32::GetCwd not Cwd::getdcwd because we're sure
+            # to have the former but not necessarily the latter
+            my ($drv) = Win32::GetCwd() =~ /^($DRV_VOL | $UNC_VOL)/x;
             return path( $drv . $self->[PATH] );
         }
     }
@@ -479,14 +481,14 @@ sub lines {
     if ( $args->{count} ) {
         my ( @result, $counter );
         while ( my $line = <$fh> ) {
-            chomp $line if $chomp;
+            $line =~ s/(?:\x{0d}?\x{0a}|\x{0d})$// if $chomp;
             push @result, $line;
             last if ++$counter == $args->{count};
         }
         return @result;
     }
     elsif ($chomp) {
-        return map { chomp; $_ } <$fh>;
+        return map { s/(?:\x{0d}?\x{0a}|\x{0d})$//; $_ } <$fh>; ## no critic
     }
     else {
         return wantarray ? <$fh> : ( my $count =()= <$fh> );
@@ -497,7 +499,7 @@ sub lines_raw {
     my $self = shift;
     my $args = _get_args( shift, qw/binmode chomp count/ );
     if ( $args->{chomp} && !$args->{count} ) {
-        return split /\n/, slurp_raw($self); ## no critic
+        return split /\n/, slurp_raw($self);                    ## no critic
     }
     else {
         $args->{binmode} = ":raw";
@@ -512,7 +514,7 @@ sub lines_utf8 {
         && $args->{chomp}
         && !$args->{count} )
     {
-        return split /\n/, slurp_utf8($self); ## no critic
+        return split /(?:\x{0d}?\x{0a}|\x{0d})/, slurp_utf8($self); ## no critic
     }
     else {
         $args->{binmode} = ":raw:encoding(UTF-8)";
@@ -620,7 +622,10 @@ sub _non_empty {
 sub realpath {
     my $self = shift;
     require Cwd;
-    my $realpath = eval { Cwd::realpath( $self->[PATH] ) };
+    my $realpath = eval {
+        local $SIG{__WARN__} = sub { }; # (sigh) pure-perl CWD can carp
+        Cwd::realpath( $self->[PATH] );
+    };
     $self->_throw("resolving realpath") unless defined $realpath and length $realpath;
     return path($realpath);
 }
@@ -740,6 +745,43 @@ sub lstat {
 sub stringify { $_[0]->[PATH] }
 
 
+sub subsumes {
+    my $self = shift;
+    Carp::croak("subsumes() requires a defined, positive-length argument")
+      unless defined $_[0];
+    my $other = path(shift);
+
+    # normalize absolute vs relative
+    if ( $self->is_absolute && !$other->is_absolute ) {
+        $other = $other->absolute;
+    }
+    elsif ( $other->is_absolute && !$self->is_absolute ) {
+        $self = $self->absolute;
+    }
+
+    # normalize volume vs non-volume; do this after absolute path
+    # adjustments above since that might add volumes already
+    if ( length $self->volume && !length $other->volume ) {
+        $other = $other->absolute;
+    }
+    elsif ( length $other->volume && !length $self->volume ) {
+        $self = $self->absolute;
+    }
+
+    if ( $self->[PATH] eq '.' ) {
+        return !!1; # cwd subsumes everything relative
+    }
+    elsif ( $self->is_rootdir ) {
+        # a root directory ("/", "c:/") already ends with a separator
+        return $other->[PATH] =~ m{^\Q$self->[PATH]\E};
+    }
+    else {
+        # exact match or prefix breaking at a separator
+        return $other->[PATH] =~ m{^\Q$self->[PATH]\E(?:/|$)};
+    }
+}
+
+
 sub touch {
     my ( $self, $epoch ) = @_;
     if ( !-e $self->[PATH] ) {
@@ -797,7 +839,7 @@ Path::Tiny - File path utility
 
 =head1 VERSION
 
-version 0.047
+version 0.048
 
 =head1 SYNOPSIS
 
@@ -1137,8 +1179,9 @@ L<Path::Iterator::Rule>.
 Returns a list of lines from a file.  Optionally takes a hash-reference of
 options.  Valid options are C<binmode>, C<count> and C<chomp>.  If C<binmode>
 is provided, it will be set on the handle prior to reading.  If C<count> is
-provided, up to that many lines will be returned. If C<chomp> is set, lines
-will be chomped before being returned.
+provided, up to that many lines will be returned. If C<chomp> is set, any
+end-of-line character sequences (C<CR>, C<CRLF>, or C<LF>) will be removed
+from the lines returned.
 
 Because the return is a list, C<lines> in scalar context will return the number
 of lines (and throw away the data).
@@ -1316,6 +1359,25 @@ Like calling C<stat> or C<lstat> from L<File::stat>.
 
 Returns a string representation of the path.  Unlike C<canonpath>, this method
 returns the path standardized with Unix-style C</> directory separators.
+
+=head2 subsumes
+
+    path("foo/bar")->subsumes("foo/bar/baz"); # true
+    path("/foo/bar")->subsumes("/foo/baz");   # false
+
+Returns true if the first path is a prefix of the second path at a directory
+boundary.
+
+This B<does not> resolve parent directory entries (C<..>) or symlinks:
+
+    path("foo/bar")->subsumes("foo/bar/../baz"); # true
+
+If such things are important to you, ensure that both paths are resolved to
+the filesystem with C<realpath>:
+
+    my $p1 = path("foo/bar")->realpath;
+    my $p2 = path("foo/bar/../baz")->realpath;
+    if ( $p1->subsumes($p2) ) { ... }
 
 =head2 touch
 

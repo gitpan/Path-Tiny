@@ -2,7 +2,7 @@ NAME
     Path::Tiny - File path utility
 
 VERSION
-    version 0.047
+    version 0.048
 
 SYNOPSIS
       use Path::Tiny;
@@ -322,7 +322,8 @@ METHODS
     of options. Valid options are "binmode", "count" and "chomp". If
     "binmode" is provided, it will be set on the handle prior to reading. If
     "count" is provided, up to that many lines will be returned. If "chomp"
-    is set, lines will be chomped before being returned.
+    is set, any end-of-line character sequences ("CR", "CRLF", or "LF") will
+    be removed from the lines returned.
 
     Because the return is a list, "lines" in scalar context will return the
     number of lines (and throw away the data).
@@ -489,6 +490,24 @@ METHODS
     Returns a string representation of the path. Unlike "canonpath", this
     method returns the path standardized with Unix-style "/" directory
     separators.
+
+  subsumes
+        path("foo/bar")->subsumes("foo/bar/baz"); # true
+        path("/foo/bar")->subsumes("/foo/baz");   # false
+
+    Returns true if the first path is a prefix of the second path at a
+    directory boundary.
+
+    This does not resolve parent directory entries ("..") or symlinks:
+
+        path("foo/bar")->subsumes("foo/bar/../baz"); # true
+
+    If such things are important to you, ensure that both paths are resolved
+    to the filesystem with "realpath":
+
+        my $p1 = path("foo/bar")->realpath;
+        my $p2 = path("foo/bar/../baz")->realpath;
+        if ( $p1->subsumes($p2) ) { ... }
 
   touch
         path("foo.txt")->touch;

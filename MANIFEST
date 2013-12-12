@@ -28,6 +28,7 @@ t/overloading.t
 t/parent.t
 t/recurse.t
 t/rel-abs.t
+t/subsumes.t
 t/temp.t
 t/zzz-spec.t
 tidyall.ini

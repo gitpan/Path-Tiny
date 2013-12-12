@@ -1,5 +1,23 @@
 Revision history for Path-Tiny
 
+0.048     2013-12-11 21:56:23 America/New_York
+
+    [ADDED]
+
+    - Added 'subsumes' method
+
+    [CHANGED]
+
+    - The 'chomp' option for 'lines' will remove any end-of-line sequences
+      fully instead of just chomping the last character
+
+    - The 'flock' package will no longer indexed by PAUSE
+
+    [FIXED]
+
+    - Hides warnings and fixes possible fatal errors from pure-perl Cwd,
+      particularly on MSWin32
+
 0.047     2013-11-26 15:11:13 America/New_York
 
     [FIXED]

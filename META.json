@@ -21,7 +21,8 @@
          "corpus"
       ],
       "package" : [
-         "DB"
+         "DB",
+         "flock"
       ]
    },
    "prereqs" : {
@@ -95,15 +96,11 @@
    "provides" : {
       "Path::Tiny" : {
          "file" : "lib/Path/Tiny.pm",
-         "version" : "0.047"
+         "version" : "0.048"
       },
       "Path::Tiny::Error" : {
          "file" : "lib/Path/Tiny.pm",
-         "version" : "0.047"
-      },
-      "flock" : {
-         "file" : "lib/Path/Tiny.pm",
-         "version" : "0.047"
+         "version" : "0.048"
       }
    },
    "release_status" : "stable",
@@ -118,7 +115,7 @@
          "web" : "https://github.com/dagolden/Path-Tiny"
       }
    },
-   "version" : "0.047",
+   "version" : "0.048",
    "x_authority" : "cpan:DAGOLDEN",
    "x_contributors" : [
       "Chris Williams <bingos@cpan.org>",
