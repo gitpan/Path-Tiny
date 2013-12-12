@@ -4,7 +4,7 @@ use warnings;
 
 package Path::Tiny;
 # ABSTRACT: File path utility
-our $VERSION = '0.048'; # VERSION
+our $VERSION = '0.049'; # VERSION
 
 # Dependencies
 use Config;
@@ -32,13 +32,7 @@ use overload (
     fallback => 1,
 );
 
-# if cloning, threads should already be loaded, but Win32 pseudoforks
-# don't do that so we have to be sure it's loaded anyway
-my $TID = 0; # for thread safe atomic writes
-
-sub CLONE { require threads; $TID = threads->tid }
-
-my $HAS_UU;  # has Unicode::UTF8; lazily populated
+my $HAS_UU; # has Unicode::UTF8; lazily populated
 
 sub _check_UU {
     eval { require Unicode::UTF8; Unicode::UTF8->VERSION(0.58); 1 };
@@ -702,7 +696,7 @@ sub spew {
     my $binmode = $args->{binmode};
     # get default binmode from caller's lexical scope (see "perldoc open")
     $binmode = ( ( caller(0) )[10] || {} )->{'open>'} unless defined $binmode;
-    my $temp = path( $self->[PATH] . $TID . $$ );
+    my $temp = path( $self->[PATH] . $$ . int( rand( 2**31 ) ) );
     my $fh = $temp->filehandle( { locked => 1 }, ">", $binmode );
     print {$fh} map { ref eq 'ARRAY' ? @$_ : $_ } @data;
     close $fh or $self->_throw( 'close', $temp->[PATH] );
@@ -839,7 +833,7 @@ Path::Tiny - File path utility
 
 =head1 VERSION
 
-version 0.048
+version 0.049
 
 =head1 SYNOPSIS
 
