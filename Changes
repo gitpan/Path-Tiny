@@ -1,5 +1,12 @@
 Revision history for Path-Tiny
 
+0.050     2013-12-20 07:27:20 America/New_York
+
+    [FIXED]
+
+    - Recursive iteration won't throw an exception if a directory is
+      removed or unreadable during iteration.
+
 0.049     2013-12-12 00:48:01 America/New_York
 
     [FIXED]

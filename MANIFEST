@@ -23,6 +23,7 @@ t/input_output_no_UU.t
 t/lib/TestUtils.pm
 t/locking.t
 t/mkpath.t
+t/mutable_tree_while_iterating.t
 t/normalize.t
 t/overloading.t
 t/parent.t

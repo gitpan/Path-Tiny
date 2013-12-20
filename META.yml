@@ -33,10 +33,10 @@ no_index:
 provides:
   Path::Tiny:
     file: lib/Path/Tiny.pm
-    version: 0.049
+    version: 0.050
   Path::Tiny::Error:
     file: lib/Path/Tiny.pm
-    version: 0.049
+    version: 0.050
 recommends:
   Unicode::UTF8: 0.58
 requires:
@@ -61,7 +61,7 @@ resources:
   bugtracker: https://github.com/dagolden/Path-Tiny/issues
   homepage: https://github.com/dagolden/Path-Tiny
   repository: https://github.com/dagolden/Path-Tiny.git
-version: 0.049
+version: 0.050
 x_authority: cpan:DAGOLDEN
 x_contributors:
   - 'Chris Williams <bingos@cpan.org>'
@@ -72,7 +72,6 @@ x_contributors:
   - 'Geraud Continsouzas <geraud@scsi.nc>'
   - 'Goro Fuji <gfuji@cpan.org>'
   - 'Karen Etheridge <ether@cpan.org>'
-  - 'Keedi Kim <keedi@cpan.org>'
   - 'Martin Kjeldsen <mk@bluepipe.dk>'
   - 'Michael G. Schwern <mschwern@cpan.org>'
   - 'Toby Inkster <tobyink@cpan.org>'

@@ -2,7 +2,7 @@ NAME
     Path::Tiny - File path utility
 
 VERSION
-    version 0.049
+    version 0.050
 
 SYNOPSIS
       use Path::Tiny;
@@ -298,7 +298,8 @@ METHODS
     If the "recurse" option is true, the iterator will walk the directory
     recursively, breadth-first. If the "follow_symlinks" option is also
     true, directory links will be followed recursively. There is no
-    protection against loops when following links.
+    protection against loops when following links. If a directory is not
+    readable, it will not be followed.
 
     The default is the same as:
 
@@ -633,6 +634,9 @@ SEE ALSO
     There are probably comparable, non-Tiny tools. Let me know if you want
     me to add a module to the list.
 
+    This module was featured in the 2013 Perl Advent Calendar
+    <http://www.perladvent.org/2013/2013-12-18.html>.
+
 SUPPORT
   Bugs / Feature Requests
     Please report any bugs or feature requests through the issue tracker at
@@ -666,8 +670,6 @@ CONTRIBUTORS
     *   Goro Fuji <gfuji@cpan.org>
 
     *   Karen Etheridge <ether@cpan.org>
-
-    *   Keedi Kim <keedi@cpan.org>
 
     *   Martin Kjeldsen <mk@bluepipe.dk>
 
