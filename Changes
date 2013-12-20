@@ -1,5 +1,11 @@
 Revision history for Path-Tiny
 
+0.051     2013-12-20 07:34:14 America/New_York
+
+    [FIXED]
+
+    - Fixed file order bug in the new test file
+
 0.050     2013-12-20 07:27:20 America/New_York
 
     [FIXED]
