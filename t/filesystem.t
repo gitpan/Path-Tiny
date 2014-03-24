@@ -25,6 +25,11 @@ ok $file, "Got a filename via tmpnam()";
 
 ok -e $file, "$file should exist";
 ok $file->is_file, "it's a file!";
+
+if ( -e "/dev/null" ) {
+    ok( path("/dev/null")->is_file, "/dev/null is_file, too" );
+}
+
 my ( $volume, $dirname, $basename ) =
   map { s{\\}{/}; $_ } File::Spec->splitpath($file);
 is( $file->volume,   $volume,   "volume correct" );
@@ -245,7 +250,9 @@ my $tmpdir = Path::Tiny->tempdir;
     my $copy = $tmpdir->child("bar.txt");
     $file->copy($copy);
     is( $copy->slurp, "Hello World\n", "file copied" );
-    chmod 0400, $copy; # read only
+    # try some different chmods
+    ok( $copy->chmod(0000),   "chmod(0000)" );
+    ok( $copy->chmod("0400"), "chmod('0400')" );
     SKIP: {
         skip "No exception if run as root", 1 if $> == 0;
         skip "No exception writing to read-only file", 1
@@ -256,6 +263,7 @@ my $tmpdir = Path::Tiny->tempdir;
         like( $error, qr/\Q$file/, "error messages includes the source file name" );
         like( $error, qr/\Q$copy/, "error messages includes the destination file name" );
     }
+    ok( $copy->chmod("u+w"), "chmod('u+w')" );
 }
 
 {

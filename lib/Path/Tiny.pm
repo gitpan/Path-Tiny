@@ -4,7 +4,7 @@ use warnings;
 
 package Path::Tiny;
 # ABSTRACT: File path utility
-our $VERSION = '0.052'; # VERSION
+our $VERSION = '0.053'; # TRIAL VERSION
 
 # Dependencies
 use Config;
@@ -67,6 +67,34 @@ sub _is_root {
     return IS_WIN32() ? ( $_[0] =~ /^$WIN32_ROOT$/ ) : ( $_[0] eq '/' );
 }
 
+# mode bits encoded for chmod in symbolic mode
+my %MODEBITS = ( om => 0007, gm => 0070, um => 0700 ); ## no critic
+{ my $m = 0; $MODEBITS{$_} = ( 1 << $m++ ) for qw/ox ow or gx gw gr ux uw ur/ };
+
+sub _symbolic_chmod {
+    my ( $mode, $symbolic ) = @_;
+    for my $clause ( split /,\s*/, $symbolic ) {
+        if ( $clause =~ m{\A([augo]+)([=+-])([rwx]+)\z} ) {
+            my ( $who, $action, $perms ) = ( $1, $2, $3 );
+            $who =~ s/a/ugo/g;
+            for my $w ( split //, $who ) {
+                my $p = 0;
+                $p |= $MODEBITS{"$w$_"} for split //, $perms;
+                if ( $action eq '=' ) {
+                    $mode = ( $mode & ~$MODEBITS{"${w}m"} ) | $p;
+                }
+                else {
+                    $mode = $action eq "+" ? ( $mode | $p ) : ( $mode & ~$p );
+                }
+            }
+        }
+        else {
+            Carp::croak("Invalid mode clause '$clause' for chmod()");
+        }
+    }
+    return $mode;
+}
+
 # flock doesn't work on NFS on BSD.  Since program authors often can't control
 # or detect that, we warn once instead of being fatal if we can detect it and
 # people who need it strict can fatalize the 'flock' category
@@ -119,6 +147,33 @@ sub _get_args {
 # Constructors
 #--------------------------------------------------------------------------#
 
+#pod =construct path
+#pod
+#pod     $path = path("foo/bar");
+#pod     $path = path("/tmp", "file.txt"); # list
+#pod     $path = path(".");                # cwd
+#pod     $path = path("~user/file.txt");   # tilde processing
+#pod
+#pod Constructs a C<Path::Tiny> object.  It doesn't matter if you give a file or
+#pod directory path.  It's still up to you to call directory-like methods only on
+#pod directories and file-like methods only on files.  This function is exported
+#pod automatically by default.
+#pod
+#pod The first argument must be defined and have non-zero length or an exception
+#pod will be thrown.  This prevents subtle, dangerous errors with code like
+#pod C<< path( maybe_undef() )->remove_tree >>.
+#pod
+#pod If the first component of the path is a tilde ('~') then the component will be
+#pod replaced with the output of C<glob('~')>.  If the first component of the path
+#pod is a tilde followed by a user name then the component will be replaced with
+#pod output of C<glob('~username')>.  Behaviour for non-existent users depends on
+#pod the output of C<glob> on the system.
+#pod
+#pod On Windows, if the path consists of a drive identifier without a path component
+#pod (C<C:> or C<D:>), it will be expanded to the absolute path of the current
+#pod directory on that volume using C<Cwd::getdcwd()>.
+#pod
+#pod =cut
 
 sub path {
     my $path = shift;
@@ -163,18 +218,81 @@ sub path {
     bless [ $path, $cpath ], __PACKAGE__;
 }
 
+#pod =construct new
+#pod
+#pod     $path = Path::Tiny->new("foo/bar");
+#pod
+#pod This is just like C<path>, but with method call overhead.  (Why would you
+#pod do that?)
+#pod
+#pod =cut
 
 sub new { shift; path(@_) }
 
+#pod =construct cwd
+#pod
+#pod     $path = Path::Tiny->cwd; # path( Cwd::getcwd )
+#pod     $path = cwd; # optional export
+#pod
+#pod Gives you the absolute path to the current directory as a C<Path::Tiny> object.
+#pod This is slightly faster than C<< path(".")->absolute >>.
+#pod
+#pod C<cwd> may be exported on request and used as a function instead of as a
+#pod method.
+#pod
+#pod =cut
 
 sub cwd {
     require Cwd;
     return path( Cwd::getcwd() );
 }
 
+#pod =construct rootdir
+#pod
+#pod     $path = Path::Tiny->rootdir; # /
+#pod     $path = rootdir;             # optional export 
+#pod
+#pod Gives you C<< File::Spec->rootdir >> as a C<Path::Tiny> object if you're too
+#pod picky for C<path("/")>.
+#pod
+#pod C<rootdir> may be exported on request and used as a function instead of as a
+#pod method.
+#pod
+#pod =cut
 
 sub rootdir { path( File::Spec->rootdir ) }
 
+#pod =construct tempfile, tempdir
+#pod
+#pod     $temp = Path::Tiny->tempfile( @options );
+#pod     $temp = Path::Tiny->tempdir( @options );
+#pod     $temp = tempfile( @options ); # optional export
+#pod     $temp = tempdir( @options );  # optional export
+#pod
+#pod C<tempfile> passes the options to C<< File::Temp->new >> and returns a C<Path::Tiny>
+#pod object with the file name.  The C<TMPDIR> option is enabled by default.
+#pod
+#pod The resulting C<File::Temp> object is cached. When the C<Path::Tiny> object is
+#pod destroyed, the C<File::Temp> object will be as well.
+#pod
+#pod C<File::Temp> annoyingly requires you to specify a custom template in slightly
+#pod different ways depending on which function or method you call, but
+#pod C<Path::Tiny> lets you ignore that and can take either a leading template or a
+#pod C<TEMPLATE> option and does the right thing.
+#pod
+#pod     $temp = Path::Tiny->tempfile( "customXXXXXXXX" );             # ok
+#pod     $temp = Path::Tiny->tempfile( TEMPLATE => "customXXXXXXXX" ); # ok
+#pod
+#pod The tempfile path object will normalized to have an absolute path, even if
+#pod created in a relative directory using C<DIR>.
+#pod
+#pod C<tempdir> is just like C<tempfile>, except it calls
+#pod C<< File::Temp->newdir >> instead.
+#pod
+#pod Both C<tempfile> and C<tempdir> may be exported on request and used as
+#pod functions instead of as methods.
+#pod
+#pod =cut
 
 sub tempfile {
     shift if $_[0] eq 'Path::Tiny'; # called as method
@@ -228,6 +346,24 @@ sub _splitpath {
 # Public methods
 #--------------------------------------------------------------------------#
 
+#pod =method absolute
+#pod
+#pod     $abs = path("foo/bar")->absolute;
+#pod     $abs = path("foo/bar")->absolute("/tmp");
+#pod
+#pod Returns a new C<Path::Tiny> object with an absolute path (or itself if already
+#pod absolute).  Unless an argument is given, the current directory is used as the
+#pod absolute base path.  The argument must be absolute or you won't get an absolute
+#pod result.
+#pod
+#pod This will not resolve upward directories ("foo/../bar") unless C<canonpath>
+#pod in L<File::Spec> would normally do so on your platform.  If you need them
+#pod resolved, you must call the more expensive C<realpath> method instead.
+#pod
+#pod On Windows, an absolute path without a volume component will have it added
+#pod based on the current drive.
+#pod
+#pod =cut
 
 sub absolute {
     my ( $self, $base ) = @_;
@@ -253,6 +389,26 @@ sub absolute {
     return path( ( defined($base) ? $base : Cwd::getcwd() ), $_[0]->[PATH] );
 }
 
+#pod =method append, append_raw, append_utf8
+#pod
+#pod     path("foo.txt")->append(@data);
+#pod     path("foo.txt")->append(\@data);
+#pod     path("foo.txt")->append({binmode => ":raw"}, @data);
+#pod     path("foo.txt")->append_raw(@data);
+#pod     path("foo.txt")->append_utf8(@data);
+#pod
+#pod Appends data to a file.  The file is locked with C<flock> prior to writing.  An
+#pod optional hash reference may be used to pass options.  The only option is
+#pod C<binmode>, which is passed to C<binmode()> on the handle used for writing.
+#pod
+#pod C<append_raw> is like C<append> with a C<binmode> of C<:unix> for fast,
+#pod unbuffered, raw write.
+#pod
+#pod C<append_utf8> is like C<append> with a C<binmode> of
+#pod C<:unix:encoding(UTF-8)>.  If L<Unicode::UTF8> 0.58+ is installed, a raw
+#pod append will be done instead on the data encoded with C<Unicode::UTF8>.
+#pod
+#pod =cut
 
 sub append {
     my ( $self, @data ) = @_;
@@ -278,6 +434,13 @@ sub append_utf8 {
     }
 }
 
+#pod =method basename
+#pod
+#pod     $name = path("foo/bar.txt")->basename; # bar.txt
+#pod
+#pod Returns the file portion or last directory portion of a path.
+#pod
+#pod =cut
 
 sub basename {
     my ($self) = @_;
@@ -285,15 +448,50 @@ sub basename {
     return $self->[FILE];
 }
 
+#pod =method canonpath
+#pod
+#pod     $canonical = path("foo/bar")->canonpath; # foo\bar on Windows
+#pod
+#pod Returns a string with the canonical format of the path name for
+#pod the platform.  In particular, this means directory separators
+#pod will be C<\> on Windows.
+#pod
+#pod =cut
 
 sub canonpath { $_[0]->[CANON] }
 
+#pod =method child
+#pod
+#pod     $file = path("/tmp")->child("foo.txt"); # "/tmp/foo.txt"
+#pod     $file = path("/tmp")->child(@parts);
+#pod
+#pod Returns a new C<Path::Tiny> object relative to the original.  Works
+#pod like C<catfile> or C<catdir> from File::Spec, but without caring about
+#pod file or directories.
+#pod
+#pod =cut
 
 sub child {
     my ( $self, @parts ) = @_;
     return path( $self->[PATH], @parts );
 }
 
+#pod =method children
+#pod
+#pod     @paths = path("/tmp")->children;
+#pod     @paths = path("/tmp")->children( qr/\.txt$/ );
+#pod
+#pod Returns a list of C<Path::Tiny> objects for all files and directories
+#pod within a directory.  Excludes "." and ".." automatically.
+#pod
+#pod If an optional C<qr//> argument is provided, it only returns objects for child
+#pod names that match the given regular expression.  Only the base name is used
+#pod for matching:
+#pod
+#pod     @paths = path("/tmp")->children( qr/^foo/ );
+#pod     # matches children like the glob foo*
+#pod
+#pod =cut
 
 sub children {
     my ( $self, $filter ) = @_;
@@ -315,6 +513,51 @@ sub children {
     return map { path( $self->[PATH], $_ ) } @children;
 }
 
+#pod =method chmod
+#pod
+#pod     path("foo.txt")->chmod(0777);
+#pod     path("foo.txt")->chmod("0755");
+#pod     path("foo.txt")->chmod("go-w");
+#pod     path("foo.txt")->chmod("a=r,u+wx");
+#pod
+#pod Sets file or directory permissions.  The argument can be a numeric mode, a
+#pod octal string beginning with a "0" or a limited subset of the symbolic mode use
+#pod by F</bin/chmod>.
+#pod
+#pod The symbolic mode must be a comma-delimited list of mode clauses.  Clauses must
+#pod match C<< qr/\A([augo]+)([=+-])([rwx]+)\z/ >>, which defines "who", "op" and
+#pod "perms" parameters for each clause.  Unlike F</bin/chmod>, all three parameters
+#pod are required for each clause, multiple ops are not allowed and permissions
+#pod C<stugoX> are not supported.  (See L<File::chmod> for more complex needs.)
+#pod
+#pod =cut
+
+sub chmod {
+    my ( $self, $new_mode ) = @_;
+
+    my $mode;
+    if ( $new_mode =~ /\d/ ) {
+        $mode = ( $new_mode =~ /^0/ ? oct($new_mode) : $new_mode );
+    }
+    elsif ( $new_mode =~ /[=+-]/ ) {
+        $mode = _symbolic_chmod( $self->stat->mode & 07777, $new_mode ); ## no critic
+    }
+    else {
+        Carp::croak("Invalid mode argument '$new_mode' for chmod()");
+    }
+
+    CORE::chmod( $mode, $self->[PATH] ) or $self->_throw("chmod");
+
+    return 1;
+}
+
+#pod =method copy
+#pod
+#pod     path("/tmp/foo.txt")->copy("/tmp/bar.txt");
+#pod
+#pod Copies a file using L<File::Copy>'s C<copy> function.
+#pod
+#pod =cut
 
 # XXX do recursively for directories?
 sub copy {
@@ -324,6 +567,16 @@ sub copy {
       or Carp::croak("copy failed for $self to $dest: $!");
 }
 
+#pod =method digest
+#pod
+#pod     $obj = path("/tmp/foo.txt")->digest;        # SHA-256
+#pod     $obj = path("/tmp/foo.txt")->digest("MD5"); # user-selected
+#pod
+#pod Returns a hexadecimal digest for a file.  Any arguments are passed to the
+#pod constructor for L<Digest> to select an algorithm.  If no arguments are given,
+#pod the default is SHA-256.
+#pod
+#pod =cut
 
 sub digest {
     my ( $self, $alg, @args ) = @_;
@@ -332,6 +585,16 @@ sub digest {
     return Digest->new( $alg, @args )->add( $self->slurp_raw )->hexdigest;
 }
 
+#pod =method dirname
+#pod
+#pod     $name = path("/tmp/foo.txt")->dirname; # "/tmp/"
+#pod
+#pod Returns the directory name portion of the path.  This is roughly
+#pod equivalent to what L<File::Spec> would give from C<splitpath> and thus
+#pod usually has the trailing slash. If that's not desired, stringify directories
+#pod or call C<parent> on files.
+#pod
+#pod =cut
 
 sub dirname {
     my ($self) = @_;
@@ -339,13 +602,48 @@ sub dirname {
     return length $self->[DIR] ? $self->[DIR] : ".";
 }
 
+#pod =method exists, is_file, is_dir
+#pod
+#pod     if ( path("/tmp")->exists ) { ... }     # -e
+#pod     if ( path("/tmp")->is_dir ) { ... }     # -d
+#pod     if ( path("/tmp")->is_file ) { ... }    # -e && ! -d
+#pod
+#pod Implements file test operations, this means the file or directory actually has
+#pod to exist on the filesystem.  Until then, it's just a path.
+#pod
+#pod B<Note>: C<is_file> is not C<-f> because C<-f> is not the opposite of C<-d>.
+#pod C<-f> means "plain file", excluding symlinks, devices, etc. that often can be
+#pod read just like files.
+#pod
+#pod Use C<-f> instead if you really mean to check for a plain file.
+#pod
+#pod
+#pod =cut
 
 sub exists { -e $_[0]->[PATH] }
 
-sub is_file { -f $_[0]->[PATH] }
+sub is_file { -e $_[0]->[PATH] && !-d _ }
 
 sub is_dir { -d $_[0]->[PATH] }
 
+#pod =method filehandle
+#pod
+#pod     $fh = path("/tmp/foo.txt")->filehandle($mode, $binmode);
+#pod     $fh = path("/tmp/foo.txt")->filehandle({ locked => 1 }, $mode, $binmode);
+#pod
+#pod Returns an open file handle.  The C<$mode> argument must be a Perl-style
+#pod read/write mode string ("<" ,">", "<<", etc.).  If a C<$binmode>
+#pod is given, it is set during the C<open> call.
+#pod
+#pod An optional hash reference may be used to pass options.  The only option is
+#pod C<locked>.  If true, handles opened for writing, appending or read-write are
+#pod locked with C<LOCK_EX>; otherwise, they are locked with C<LOCK_SH>.  When using
+#pod C<locked>, ">" or "+>" modes will delay truncation until after the lock is
+#pod acquired.
+#pod
+#pod See C<openr>, C<openw>, C<openrw>, and C<opena> for sugar.
+#pod
+#pod =cut
 
 # Note: must put binmode on open line, not subsequent binmode() call, so things
 # like ":unix" actually stop perlio/crlf from being added
@@ -415,11 +713,35 @@ sub filehandle {
     return $fh;
 }
 
+#pod =method is_absolute, is_relative
+#pod
+#pod     if ( path("/tmp")->is_absolute ) { ... }
+#pod     if ( path("/tmp")->is_relative ) { ... }
+#pod
+#pod Booleans for whether the path appears absolute or relative.
+#pod
+#pod =cut
 
 sub is_absolute { substr( $_[0]->dirname, 0, 1 ) eq '/' }
 
 sub is_relative { substr( $_[0]->dirname, 0, 1 ) ne '/' }
 
+#pod =method is_rootdir
+#pod
+#pod     while ( ! $path->is_rootdir ) {
+#pod         $path = $path->parent;
+#pod         ...
+#pod     }
+#pod
+#pod Boolean for whether the path is the root directory of the volume.  I.e. the
+#pod C<dirname> is C<q[/]> and the C<basename> is C<q[]>.
+#pod
+#pod This works even on C<MSWin32> with drives and UNC volumes:
+#pod
+#pod     path("C:/")->is_rootdir;             # true
+#pod     path("//server/share/")->is_rootdir; #true
+#pod
+#pod =cut
 
 sub is_rootdir {
     my ($self) = @_;
@@ -427,6 +749,38 @@ sub is_rootdir {
     return $self->[DIR] eq '/' && $self->[FILE] eq '';
 }
 
+#pod =method iterator
+#pod
+#pod     $iter = path("/tmp")->iterator( \%options );
+#pod
+#pod Returns a code reference that walks a directory lazily.  Each invocation
+#pod returns a C<Path::Tiny> object or undef when the iterator is exhausted.
+#pod
+#pod     $iter = path("/tmp")->iterator;
+#pod     while ( $path = $iter->() ) {
+#pod         ...
+#pod     }
+#pod
+#pod The current and parent directory entries ("." and "..") will not
+#pod be included.
+#pod
+#pod If the C<recurse> option is true, the iterator will walk the directory
+#pod recursively, breadth-first.  If the C<follow_symlinks> option is also true,
+#pod directory links will be followed recursively.  There is no protection against
+#pod loops when following links. If a directory is not readable, it will not be
+#pod followed.
+#pod
+#pod The default is the same as:
+#pod
+#pod     $iter = path("/tmp")->iterator( {
+#pod         recurse         => 0,
+#pod         follow_symlinks => 0,
+#pod     } );
+#pod
+#pod For a more powerful, recursive iterator with built-in loop avoidance, see
+#pod L<Path::Iterator::Rule>.
+#pod
+#pod =cut
 
 sub iterator {
     my $self = shift;
@@ -472,6 +826,38 @@ sub iterator {
     };
 }
 
+#pod =method lines, lines_raw, lines_utf8
+#pod
+#pod     @contents = path("/tmp/foo.txt")->lines;
+#pod     @contents = path("/tmp/foo.txt")->lines(\%options);
+#pod     @contents = path("/tmp/foo.txt")->lines_raw;
+#pod     @contents = path("/tmp/foo.txt")->lines_utf8;
+#pod
+#pod     @contents = path("/tmp/foo.txt")->lines( { chomp => 1, count => 4 } );
+#pod
+#pod Returns a list of lines from a file.  Optionally takes a hash-reference of
+#pod options.  Valid options are C<binmode>, C<count> and C<chomp>.  If C<binmode>
+#pod is provided, it will be set on the handle prior to reading.  If C<count> is
+#pod provided, up to that many lines will be returned. If C<chomp> is set, any
+#pod end-of-line character sequences (C<CR>, C<CRLF>, or C<LF>) will be removed
+#pod from the lines returned.
+#pod
+#pod Because the return is a list, C<lines> in scalar context will return the number
+#pod of lines (and throw away the data).
+#pod
+#pod     $number_of_lines = path("/tmp/foo.txt")->lines;
+#pod
+#pod C<lines_raw> is like C<lines> with a C<binmode> of C<:raw>.  We use C<:raw>
+#pod instead of C<:unix> so PerlIO buffering can manage reading by line.
+#pod
+#pod C<lines_utf8> is like C<lines> with a C<binmode> of
+#pod C<:raw:encoding(UTF-8)>.  If L<Unicode::UTF8> 0.58+ is installed, a raw
+#pod UTF-8 slurp will be done and then the lines will be split.  This is
+#pod actually faster than relying on C<:encoding(UTF-8)>, though a bit memory
+#pod intensive.  If memory use is a concern, consider C<openr_utf8> and
+#pod iterating directly on the handle.
+#pod
+#pod =cut
 
 sub lines {
     my $self    = shift;
@@ -525,6 +911,17 @@ sub lines_utf8 {
     }
 }
 
+#pod =method mkpath
+#pod
+#pod     path("foo/bar/baz")->mkpath;
+#pod     path("foo/bar/baz")->mkpath( \%options );
+#pod
+#pod Like calling C<make_path> from L<File::Path>.  An optional hash reference
+#pod is passed through to C<make_path>.  Errors will be trapped and an exception
+#pod thrown.  Returns the list of directories created or an empty list if
+#pod the directories already exist, just like C<make_path>.
+#pod
+#pod =cut
 
 sub mkpath {
     my ( $self, $args ) = @_;
@@ -540,6 +937,13 @@ sub mkpath {
     return @dirs;
 }
 
+#pod =method move
+#pod
+#pod     path("foo.txt")->move("bar.txt");
+#pod
+#pod Just like C<rename>.
+#pod
+#pod =cut
 
 sub move {
     my ( $self, $dst ) = @_;
@@ -548,6 +952,38 @@ sub move {
       || $self->_throw( 'rename', $self->[PATH] . "' -> '$dst'" );
 }
 
+#pod =method openr, openw, openrw, opena
+#pod
+#pod     $fh = path("foo.txt")->openr($binmode);  # read
+#pod     $fh = path("foo.txt")->openr_raw;
+#pod     $fh = path("foo.txt")->openr_utf8;
+#pod
+#pod     $fh = path("foo.txt")->openw($binmode);  # write
+#pod     $fh = path("foo.txt")->openw_raw;
+#pod     $fh = path("foo.txt")->openw_utf8;
+#pod
+#pod     $fh = path("foo.txt")->opena($binmode);  # append
+#pod     $fh = path("foo.txt")->opena_raw;
+#pod     $fh = path("foo.txt")->opena_utf8;
+#pod
+#pod     $fh = path("foo.txt")->openrw($binmode); # read/write
+#pod     $fh = path("foo.txt")->openrw_raw;
+#pod     $fh = path("foo.txt")->openrw_utf8;
+#pod
+#pod Returns a file handle opened in the specified mode.  The C<openr> style methods
+#pod take a single C<binmode> argument.  All of the C<open*> methods have
+#pod C<open*_raw> and C<open*_utf8> equivalents that use C<:raw> and
+#pod C<:raw:encoding(UTF-8)>, respectively.
+#pod
+#pod An optional hash reference may be used to pass options.  The only option is
+#pod C<locked>.  If true, handles opened for writing, appending or read-write are
+#pod locked with C<LOCK_EX>; otherwise, they are locked for C<LOCK_SH>.
+#pod
+#pod     $fh = path("foo.txt")->openrw_utf8( { locked => 1 } );
+#pod
+#pod See L</filehandle> for more on locking.
+#pod
+#pod =cut
 
 # map method names to corresponding open mode
 my %opens = (
@@ -583,6 +1019,19 @@ while ( my ( $k, $v ) = each %opens ) {
     };
 }
 
+#pod =method parent
+#pod
+#pod     $parent = path("foo/bar/baz")->parent; # foo/bar
+#pod     $parent = path("foo/wibble.txt")->parent; # foo
+#pod
+#pod     $parent = path("foo/bar/baz")->parent(2); # foo
+#pod
+#pod Returns a C<Path::Tiny> object corresponding to the parent directory of the
+#pod original directory or file. An optional positive integer argument is the number
+#pod of parent directories upwards to return.  C<parent> by itself is equivalent to
+#pod C<parent(1)>.
+#pod
+#pod =cut
 
 # XXX this is ugly and coverage is incomplete.  I think it's there for windows
 # so need to check coverage there and compare
@@ -621,6 +1070,21 @@ sub _non_empty {
     return ( ( defined($string) && length($string) ) ? $string : "." );
 }
 
+#pod =method realpath
+#pod
+#pod     $real = path("/baz/foo/../bar")->realpath;
+#pod     $real = path("foo/../bar")->realpath;
+#pod
+#pod Returns a new C<Path::Tiny> object with all symbolic links and upward directory
+#pod parts resolved using L<Cwd>'s C<realpath>.  Compared to C<absolute>, this is
+#pod more expensive as it must actually consult the filesystem.
+#pod
+#pod If the path can't be resolved (e.g. if it includes directories that don't exist),
+#pod an exception will be thrown:
+#pod
+#pod     $real = path("doesnt_exist/foo")->realpath; # dies
+#pod
+#pod =cut
 
 sub realpath {
     my $self = shift;
@@ -633,10 +1097,29 @@ sub realpath {
     return path($realpath);
 }
 
+#pod =method relative
+#pod
+#pod     $rel = path("/tmp/foo/bar")->relative("/tmp"); # foo/bar
+#pod
+#pod Returns a C<Path::Tiny> object with a relative path name.
+#pod Given the trickiness of this, it's a thin wrapper around
+#pod C<< File::Spec->abs2rel() >>.
+#pod
+#pod =cut
 
 # Easy to get wrong, so wash it through File::Spec (sigh)
 sub relative { path( File::Spec->abs2rel( $_[0]->[PATH], $_[1] ) ) }
 
+#pod =method remove
+#pod
+#pod     path("foo.txt")->remove;
+#pod
+#pod B<Note: as of 0.012, remove only works on files>.
+#pod
+#pod This is just like C<unlink>, except if the path does not exist, it returns
+#pod false rather than throwing an exception.
+#pod
+#pod =cut
 
 sub remove {
     my $self = shift;
@@ -646,6 +1129,24 @@ sub remove {
     return unlink $self->[PATH] || $self->_throw('unlink');
 }
 
+#pod =method remove_tree
+#pod
+#pod     # directory
+#pod     path("foo/bar/baz")->remove_tree;
+#pod     path("foo/bar/baz")->remove_tree( \%options );
+#pod     path("foo/bar/baz")->remove_tree( { safe => 0 } ); # force remove
+#pod
+#pod Like calling C<remove_tree> from L<File::Path>, but defaults to C<safe> mode.
+#pod An optional hash reference is passed through to C<remove_tree>.  Errors will be
+#pod trapped and an exception thrown.  Returns the number of directories deleted,
+#pod just like C<remove_tree>.
+#pod
+#pod If you want to remove a directory only if it is empty, use the built-in
+#pod C<rmdir> function instead.
+#pod
+#pod     rmdir path("foo/bar/baz/");
+#pod
+#pod =cut
 
 sub remove_tree {
     my ( $self, $args ) = @_;
@@ -664,6 +1165,27 @@ sub remove_tree {
     return $count;
 }
 
+#pod =method slurp, slurp_raw, slurp_utf8
+#pod
+#pod     $data = path("foo.txt")->slurp;
+#pod     $data = path("foo.txt")->slurp( {binmode => ":raw"} );
+#pod     $data = path("foo.txt")->slurp_raw;
+#pod     $data = path("foo.txt")->slurp_utf8;
+#pod
+#pod Reads file contents into a scalar.  Takes an optional hash reference may be
+#pod used to pass options.  The only option is C<binmode>, which is passed to
+#pod C<binmode()> on the handle used for reading.
+#pod
+#pod C<slurp_raw> is like C<slurp> with a C<binmode> of C<:unix> for
+#pod a fast, unbuffered, raw read.
+#pod
+#pod C<slurp_utf8> is like C<slurp> with a C<binmode> of
+#pod C<:unix:encoding(UTF-8)>.  If L<Unicode::UTF8> 0.58+ is installed, a raw
+#pod slurp will be done instead and the result decoded with C<Unicode::UTF8>.
+#pod This is just as strict and is roughly an order of magnitude faster than
+#pod using C<:encoding(UTF-8)>.
+#pod
+#pod =cut
 
 sub slurp {
     my $self    = shift;
@@ -696,6 +1218,27 @@ sub slurp_utf8 {
     }
 }
 
+#pod =method spew, spew_raw, spew_utf8
+#pod
+#pod     path("foo.txt")->spew(@data);
+#pod     path("foo.txt")->spew(\@data);
+#pod     path("foo.txt")->spew({binmode => ":raw"}, @data);
+#pod     path("foo.txt")->spew_raw(@data);
+#pod     path("foo.txt")->spew_utf8(@data);
+#pod
+#pod Writes data to a file atomically.  The file is written to a temporary file in
+#pod the same directory, then renamed over the original.  An optional hash reference
+#pod may be used to pass options.  The only option is C<binmode>, which is passed to
+#pod C<binmode()> on the handle used for writing.
+#pod
+#pod C<spew_raw> is like C<spew> with a C<binmode> of C<:unix> for a fast,
+#pod unbuffered, raw write.
+#pod
+#pod C<spew_utf8> is like C<spew> with a C<binmode> of C<:unix:encoding(UTF-8)>.
+#pod If L<Unicode::UTF8> 0.58+ is installed, a raw spew will be done instead on
+#pod the data encoded with C<Unicode::UTF8>.
+#pod
+#pod =cut
 
 # XXX add "unsafe" option to disable flocking and atomic?  Check benchmarks on append() first.
 sub spew {
@@ -730,6 +1273,14 @@ sub spew_utf8 {
     }
 }
 
+#pod =method stat, lstat
+#pod
+#pod     $stat = path("foo.txt")->stat;
+#pod     $stat = path("/some/symlink")->lstat;
+#pod
+#pod Like calling C<stat> or C<lstat> from L<File::stat>.
+#pod
+#pod =cut
 
 # XXX break out individual stat() components as subs?
 sub stat {
@@ -744,9 +1295,38 @@ sub lstat {
     return File::stat::lstat( $self->[PATH] ) || $self->_throw('lstat');
 }
 
+#pod =method stringify
+#pod
+#pod     $path = path("foo.txt");
+#pod     say $path->stringify; # same as "$path"
+#pod
+#pod Returns a string representation of the path.  Unlike C<canonpath>, this method
+#pod returns the path standardized with Unix-style C</> directory separators.
+#pod
+#pod =cut
 
 sub stringify { $_[0]->[PATH] }
 
+#pod =method subsumes
+#pod
+#pod     path("foo/bar")->subsumes("foo/bar/baz"); # true
+#pod     path("/foo/bar")->subsumes("/foo/baz");   # false
+#pod
+#pod Returns true if the first path is a prefix of the second path at a directory
+#pod boundary.
+#pod
+#pod This B<does not> resolve parent directory entries (C<..>) or symlinks:
+#pod
+#pod     path("foo/bar")->subsumes("foo/bar/../baz"); # true
+#pod
+#pod If such things are important to you, ensure that both paths are resolved to
+#pod the filesystem with C<realpath>:
+#pod
+#pod     my $p1 = path("foo/bar")->realpath;
+#pod     my $p2 = path("foo/bar/../baz")->realpath;
+#pod     if ( $p1->subsumes($p2) ) { ... }
+#pod
+#pod =cut
 
 sub subsumes {
     my $self = shift;
@@ -784,6 +1364,20 @@ sub subsumes {
     }
 }
 
+#pod =method touch
+#pod
+#pod     path("foo.txt")->touch;
+#pod     path("foo.txt")->touch($epoch_secs);
+#pod
+#pod Like the Unix C<touch> utility.  Creates the file if it doesn't exist, or else
+#pod changes the modification and access times to the current time.  If the first
+#pod argument is the epoch seconds then it will be used.
+#pod
+#pod Returns the path object so it can be easily chained with spew:
+#pod
+#pod     path("foo.txt")->touch->spew( $content );
+#pod
+#pod =cut
 
 sub touch {
     my ( $self, $epoch ) = @_;
@@ -797,6 +1391,14 @@ sub touch {
     return $self;
 }
 
+#pod =method touchpath
+#pod
+#pod     path("bar/baz/foo.txt")->touchpath;
+#pod
+#pod Combines C<mkpath> and C<touch>.  Creates the parent directory if it doesn't exist,
+#pod before touching the file.  Returns the path object like C<touch> does.
+#pod
+#pod =cut
 
 sub touchpath {
     my ($self) = @_;
@@ -805,6 +1407,17 @@ sub touchpath {
     $self->touch;
 }
 
+#pod =method volume
+#pod
+#pod     $vol = path("/tmp/foo.txt")->volume;   # ""
+#pod     $vol = path("C:/tmp/foo.txt")->volume; # "C:"
+#pod
+#pod Returns the volume portion of the path.  This is equivalent
+#pod equivalent to what L<File::Spec> would give from C<splitpath> and thus
+#pod usually is the empty string on Unix-like operating systems or the
+#pod drive letter for an absolute path on C<MSWin32>.
+#pod
+#pod =cut
 
 sub volume {
     my ($self) = @_;
@@ -842,7 +1455,7 @@ Path::Tiny - File path utility
 
 =head1 VERSION
 
-version 0.052
+version 0.053
 
 =head1 SYNOPSIS
 
@@ -885,15 +1498,16 @@ version 0.052
 
 =head1 DESCRIPTION
 
-This module attempts to provide a small, fast utility for working with
-file paths.  It is friendlier to use than L<File::Spec> and provides
-easy access to functions from several other core file handling modules.
+This module provide a small, fast utility for working with file paths.  It is
+friendlier to use than L<File::Spec> and provides easy access to functions from
+several other core file handling modules.  It aims to be smaller and faster
+than many alternatives on CPAN while helping people do many common things in
+consistent and less error-prone ways.
 
-It doesn't attempt to be as full-featured as L<IO::All> or L<Path::Class>,
-nor does it try to work for anything except Unix-like and Win32 platforms.
-Even then, it might break if you try something particularly obscure or
-tortuous.  (Quick!  What does this mean: C<< ///../../..//./././a//b/.././c/././ >>?
-And how does it differ on Win32?)
+Path::Tiny does not try to work for anything except Unix-like and Win32
+platforms.  Even then, it might break if you try something particularly obscure
+or tortuous.  (Quick!  What does this mean:
+C<< ///../../..//./././a//b/.././c/././ >>?  And how does it differ on Win32?)
 
 All paths are forced to have Unix-style forward slashes.  Stringifying
 the object gives you back the path (after some clean up).
@@ -901,9 +1515,10 @@ the object gives you back the path (after some clean up).
 File input/output methods C<flock> handles before reading or writing,
 as appropriate (if supported by the platform).
 
-The C<*_utf8> methods (C<slurp_utf8>, C<lines_utf8>, etc.) operate in raw
-mode without CRLF translation.  Installing L<Unicode::UTF8> 0.58 or later
-will speed up several of them and is highly recommended.
+The C<*_utf8> methods (C<slurp_utf8>, C<lines_utf8>, etc.) operate in raw mode.
+On Windows, that means they will not have CRLF translation from the C<:crlf> IO
+layer.  Installing L<Unicode::UTF8> 0.58 or later will speed up C<*_utf8>
+situations in many cases and is highly recommended.
 
 =head1 CONSTRUCTORS
 
@@ -1068,6 +1683,23 @@ for matching:
     @paths = path("/tmp")->children( qr/^foo/ );
     # matches children like the glob foo*
 
+=head2 chmod
+
+    path("foo.txt")->chmod(0777);
+    path("foo.txt")->chmod("0755");
+    path("foo.txt")->chmod("go-w");
+    path("foo.txt")->chmod("a=r,u+wx");
+
+Sets file or directory permissions.  The argument can be a numeric mode, a
+octal string beginning with a "0" or a limited subset of the symbolic mode use
+by F</bin/chmod>.
+
+The symbolic mode must be a comma-delimited list of mode clauses.  Clauses must
+match C<< qr/\A([augo]+)([=+-])([rwx]+)\z/ >>, which defines "who", "op" and
+"perms" parameters for each clause.  Unlike F</bin/chmod>, all three parameters
+are required for each clause, multiple ops are not allowed and permissions
+C<stugoX> are not supported.  (See L<File::chmod> for more complex needs.)
+
 =head2 copy
 
     path("/tmp/foo.txt")->copy("/tmp/bar.txt");
@@ -1094,12 +1726,18 @@ or call C<parent> on files.
 
 =head2 exists, is_file, is_dir
 
-    if ( path("/tmp")->exists ) { ... }
-    if ( path("/tmp")->is_file ) { ... }
-    if ( path("/tmp")->is_dir ) { ... }
+    if ( path("/tmp")->exists ) { ... }     # -e
+    if ( path("/tmp")->is_dir ) { ... }     # -d
+    if ( path("/tmp")->is_file ) { ... }    # -e && ! -d
 
-Just like C<-e>, C<-f> or C<-d>.  This means the file or directory actually has to
-exist on the filesystem.  Until then, it's just a path.
+Implements file test operations, this means the file or directory actually has
+to exist on the filesystem.  Until then, it's just a path.
+
+B<Note>: C<is_file> is not C<-f> because C<-f> is not the opposite of C<-d>.
+C<-f> means "plain file", excluding symlinks, devices, etc. that often can be
+read just like files.
+
+Use C<-f> instead if you really mean to check for a plain file.
 
 =head2 filehandle
 
@@ -1419,9 +2057,11 @@ IS_BSD IS_WIN32
 
 =head1 EXCEPTION HANDLING
 
-Failures will be thrown as exceptions in the class C<Path::Tiny::Error>.
+Simple usage errors will generally croak.  Failures of underlying Perl
+unctions will be thrown as exceptions in the class
+C<Path::Tiny::Error>.
 
-The object will be a hash reference with the following fields:
+A C<Path::Tiny::Error> object will be a hash reference with the following fields:
 
 =over 4
 
@@ -1517,6 +2157,10 @@ These are other file/path utilities, which may offer a different feature
 set than C<Path::Tiny>.
 
 =over 4
+
+=item *
+
+L<File::chmod>
 
 =item *
 

@@ -2,7 +2,7 @@ NAME
     Path::Tiny - File path utility
 
 VERSION
-    version 0.052
+    version 0.053
 
 SYNOPSIS
       use Path::Tiny;
@@ -43,14 +43,15 @@ SYNOPSIS
       while ( my $next = $iter->() ) { ... }
 
 DESCRIPTION
-    This module attempts to provide a small, fast utility for working with
-    file paths. It is friendlier to use than File::Spec and provides easy
-    access to functions from several other core file handling modules.
+    This module provide a small, fast utility for working with file paths.
+    It is friendlier to use than File::Spec and provides easy access to
+    functions from several other core file handling modules. It aims to be
+    smaller and faster than many alternatives on CPAN while helping people
+    do many common things in consistent and less error-prone ways.
 
-    It doesn't attempt to be as full-featured as IO::All or Path::Class, nor
-    does it try to work for anything except Unix-like and Win32 platforms.
-    Even then, it might break if you try something particularly obscure or
-    tortuous. (Quick! What does this mean:
+    Path::Tiny does not try to work for anything except Unix-like and Win32
+    platforms. Even then, it might break if you try something particularly
+    obscure or tortuous. (Quick! What does this mean:
     "///../../..//./././a//b/.././c/././"? And how does it differ on Win32?)
 
     All paths are forced to have Unix-style forward slashes. Stringifying
@@ -60,8 +61,9 @@ DESCRIPTION
     appropriate (if supported by the platform).
 
     The *_utf8 methods ("slurp_utf8", "lines_utf8", etc.) operate in raw
-    mode without CRLF translation. Installing Unicode::UTF8 0.58 or later
-    will speed up several of them and is highly recommended.
+    mode. On Windows, that means they will not have CRLF translation from
+    the ":crlf" IO layer. Installing Unicode::UTF8 0.58 or later will speed
+    up *_utf8 situations in many cases and is highly recommended.
 
 CONSTRUCTORS
   path
@@ -216,6 +218,23 @@ METHODS
         @paths = path("/tmp")->children( qr/^foo/ );
         # matches children like the glob foo*
 
+  chmod
+        path("foo.txt")->chmod(0777);
+        path("foo.txt")->chmod("0755");
+        path("foo.txt")->chmod("go-w");
+        path("foo.txt")->chmod("a=r,u+wx");
+
+    Sets file or directory permissions. The argument can be a numeric mode,
+    a octal string beginning with a "0" or a limited subset of the symbolic
+    mode use by /bin/chmod.
+
+    The symbolic mode must be a comma-delimited list of mode clauses.
+    Clauses must match "qr/\A([augo]+)([=+-])([rwx]+)\z/", which defines
+    "who", "op" and "perms" parameters for each clause. Unlike /bin/chmod,
+    all three parameters are required for each clause, multiple ops are not
+    allowed and permissions "stugoX" are not supported. (See File::chmod for
+    more complex needs.)
+
   copy
         path("/tmp/foo.txt")->copy("/tmp/bar.txt");
 
@@ -238,12 +257,18 @@ METHODS
     directories or call "parent" on files.
 
   exists, is_file, is_dir
-        if ( path("/tmp")->exists ) { ... }
-        if ( path("/tmp")->is_file ) { ... }
-        if ( path("/tmp")->is_dir ) { ... }
+        if ( path("/tmp")->exists ) { ... }     # -e
+        if ( path("/tmp")->is_dir ) { ... }     # -d
+        if ( path("/tmp")->is_file ) { ... }    # -e && ! -d
 
-    Just like "-e", "-f" or "-d". This means the file or directory actually
-    has to exist on the filesystem. Until then, it's just a path.
+    Implements file test operations, this means the file or directory
+    actually has to exist on the filesystem. Until then, it's just a path.
+
+    Note: "is_file" is not "-f" because "-f" is not the opposite of "-d".
+    "-f" means "plain file", excluding symlinks, devices, etc. that often
+    can be read just like files.
+
+    Use "-f" instead if you really mean to check for a plain file.
 
   filehandle
         $fh = path("/tmp/foo.txt")->filehandle($mode, $binmode);
@@ -539,9 +564,11 @@ METHODS
     absolute path on "MSWin32".
 
 EXCEPTION HANDLING
-    Failures will be thrown as exceptions in the class "Path::Tiny::Error".
+    Simple usage errors will generally croak. Failures of underlying Perl
+    unctions will be thrown as exceptions in the class "Path::Tiny::Error".
 
-    The object will be a hash reference with the following fields:
+    A "Path::Tiny::Error" object will be a hash reference with the following
+    fields:
 
     *   "op" — a description of the operation, usually function call and any
         extra info
@@ -617,6 +644,8 @@ TYPE CONSTRAINTS AND COERCION
 SEE ALSO
     These are other file/path utilities, which may offer a different feature
     set than "Path::Tiny".
+
+    *   File::chmod
 
     *   File::Fu
 
