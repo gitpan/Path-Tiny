@@ -2,7 +2,7 @@ NAME
     Path::Tiny - File path utility
 
 VERSION
-    version 0.053
+    version 0.054
 
 SYNOPSIS
       use Path::Tiny;
@@ -90,6 +90,19 @@ CONSTRUCTORS
     On Windows, if the path consists of a drive identifier without a path
     component ("C:" or "D:"), it will be expanded to the absolute path of
     the current directory on that volume using "Cwd::getdcwd()".
+
+    If called with a single "Path::Tiny" argument, the original is returned
+    unless the original is holding a temporary file or directory reference
+    in which case a stringified copy is made.
+
+        $path = path("foo/bar");
+        $temp = Path::Tiny->tempfile;
+
+        $p2 = path($path); # like $p2 = $path
+        $t2 = path($temp); # like $t2 = path( "$temp" )
+
+    This optimizes copies without proliferating references unexpectedly if a
+    copy is made by code outside your control.
 
   new
         $path = Path::Tiny->new("foo/bar");
@@ -185,9 +198,16 @@ METHODS
     append will be done instead on the data encoded with "Unicode::UTF8".
 
   basename
-        $name = path("foo/bar.txt")->basename; # bar.txt
+        $name = path("foo/bar.txt")->basename;        # bar.txt
+        $name = path("foo.txt")->basename('.txt');    # foo
+        $name = path("foo.txt")->basename(qr/.txt/);  # foo
+        $name = path("foo.txt")->basename(@suffixes);
 
     Returns the file portion or last directory portion of a path.
+
+    Given a list of suffixes as strings or regular expressions, any that
+    match at the end of the file portion or last directory portion will be
+    removed before the result is returned.
 
   canonpath
         $canonical = path("foo/bar")->canonpath; # foo\bar on Windows

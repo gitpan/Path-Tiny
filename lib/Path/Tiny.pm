@@ -4,7 +4,7 @@ use warnings;
 
 package Path::Tiny;
 # ABSTRACT: File path utility
-our $VERSION = '0.053'; # TRIAL VERSION
+our $VERSION = '0.054'; # VERSION
 
 # Dependencies
 use Config;
@@ -31,6 +31,11 @@ use overload (
     bool     => sub () { 1 },
     fallback => 1,
 );
+
+# FREEZE/THAW per Sereal/CBOR/Types::Serialiser protocol
+sub FREEZE { return $_[0]->[PATH] }
+sub THAW   { return path( $_[2] ) }
+{ no warnings 'once'; *TO_JSON = *FREEZE };
 
 my $HAS_UU; # has Unicode::UTF8; lazily populated
 
@@ -173,12 +178,30 @@ sub _get_args {
 #pod (C<C:> or C<D:>), it will be expanded to the absolute path of the current
 #pod directory on that volume using C<Cwd::getdcwd()>.
 #pod
+#pod If called with a single C<Path::Tiny> argument, the original is returned unless
+#pod the original is holding a temporary file or directory reference in which case a
+#pod stringified copy is made.
+#pod
+#pod     $path = path("foo/bar");
+#pod     $temp = Path::Tiny->tempfile;
+#pod
+#pod     $p2 = path($path); # like $p2 = $path
+#pod     $t2 = path($temp); # like $t2 = path( "$temp" )
+#pod
+#pod This optimizes copies without proliferating references unexpectedly if a copy is
+#pod made by code outside your control.
+#pod
 #pod =cut
 
 sub path {
     my $path = shift;
-    Carp::croak("path() requires a defined, positive-length argument")
-      unless defined $path && length $path;
+    Carp::croak("Path::Tiny paths require defined, positive-length parts")
+      unless 1 + @_ == grep { defined && length } $path, @_;
+
+    # non-temp Path::Tiny objects are effectively immutable and can be reused
+    if ( !@_ && ref($path) eq __PACKAGE__ && !$path->[TEMP] ) {
+        return $path;
+    }
 
     # stringify initial path
     $path = "$path";
@@ -436,16 +459,28 @@ sub append_utf8 {
 
 #pod =method basename
 #pod
-#pod     $name = path("foo/bar.txt")->basename; # bar.txt
+#pod     $name = path("foo/bar.txt")->basename;        # bar.txt
+#pod     $name = path("foo.txt")->basename('.txt');    # foo
+#pod     $name = path("foo.txt")->basename(qr/.txt/);  # foo
+#pod     $name = path("foo.txt")->basename(@suffixes);
 #pod
 #pod Returns the file portion or last directory portion of a path.
+#pod
+#pod Given a list of suffixes as strings or regular expressions, any that match at
+#pod the end of the file portion or last directory portion will be removed before
+#pod the result is returned.
 #pod
 #pod =cut
 
 sub basename {
-    my ($self) = @_;
+    my ( $self, @suffixes ) = @_;
     $self->_splitpath unless defined $self->[FILE];
-    return $self->[FILE];
+    my $file = $self->[FILE];
+    for my $s (@suffixes) {
+        my $re = ref($s) eq 'Regexp' ? qr/$s$/ : qr/\Q$s\E$/;
+        last if $file =~ s/$re//;
+    }
+    return $file;
 }
 
 #pod =method canonpath
@@ -1455,7 +1490,7 @@ Path::Tiny - File path utility
 
 =head1 VERSION
 
-version 0.053
+version 0.054
 
 =head1 SYNOPSIS
 
@@ -1547,6 +1582,19 @@ the output of C<glob> on the system.
 On Windows, if the path consists of a drive identifier without a path component
 (C<C:> or C<D:>), it will be expanded to the absolute path of the current
 directory on that volume using C<Cwd::getdcwd()>.
+
+If called with a single C<Path::Tiny> argument, the original is returned unless
+the original is holding a temporary file or directory reference in which case a
+stringified copy is made.
+
+    $path = path("foo/bar");
+    $temp = Path::Tiny->tempfile;
+
+    $p2 = path($path); # like $p2 = $path
+    $t2 = path($temp); # like $t2 = path( "$temp" )
+
+This optimizes copies without proliferating references unexpectedly if a copy is
+made by code outside your control.
 
 =head2 new
 
@@ -1647,9 +1695,16 @@ append will be done instead on the data encoded with C<Unicode::UTF8>.
 
 =head2 basename
 
-    $name = path("foo/bar.txt")->basename; # bar.txt
+    $name = path("foo/bar.txt")->basename;        # bar.txt
+    $name = path("foo.txt")->basename('.txt');    # foo
+    $name = path("foo.txt")->basename(qr/.txt/);  # foo
+    $name = path("foo.txt")->basename(@suffixes);
 
 Returns the file portion or last directory portion of a path.
+
+Given a list of suffixes as strings or regular expressions, any that match at
+the end of the file portion or last directory portion will be removed before
+the result is returned.
 
 =head2 canonpath
 
@@ -2053,7 +2108,7 @@ drive letter for an absolute path on C<MSWin32>.
 
 =for Pod::Coverage openr_utf8 opena_utf8 openw_utf8 openrw_utf8
 openr_raw opena_raw openw_raw openrw_raw
-IS_BSD IS_WIN32
+IS_BSD IS_WIN32 FREEZE THAW TO_JSON
 
 =head1 EXCEPTION HANDLING
 

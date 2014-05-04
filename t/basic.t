@@ -84,7 +84,7 @@ is $file->parent,  '/foo/baz';
 
 {
     # Special cases
-    for my $bad ( [''], [undef], [], [ '', 'var', 'tmp' ] ) {
+    for my $bad ( [''], [undef], [], [ '', 'var', 'tmp' ], [ 'foo', '', 'bar' ] ) {
         like( exception { path(@$bad) }, qr/positive-length/, "exception" );
     }
     is( Path::Tiny->cwd,     path( Cwd::getcwd() ) );
@@ -145,6 +145,13 @@ is $file->parent,  '/foo/baz';
     $dir = path('~idontthinkso');
     is( $dir, '~idontthinkso',  'Test homedir of nonexistant user' );
     is( $dir, $missing_homedir, 'Test homedir of nonexistant user (via glob)' );
+}
+
+# freeze/thaw
+{
+    my $path = path("/foo/bar/baz");
+    is( Path::Tiny->THAW( "fake", $path->FREEZE("fake") ),
+        $path, "FREEZE-THAW roundtrip" );
 }
 
 done_testing();
