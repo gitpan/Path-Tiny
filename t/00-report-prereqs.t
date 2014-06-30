@@ -50,7 +50,7 @@ my $static_prereqs = do { my $x = {
                       },
        'develop' => {
                       'requires' => {
-                                      'Dist::Zilla' => '5.015',
+                                      'Dist::Zilla' => '5',
                                       'Dist::Zilla::Plugin::MinimumPerl' => '0',
                                       'Dist::Zilla::Plugin::OnlyCorePrereqs' => '0',
                                       'Dist::Zilla::Plugin::Prereqs' => '0',
@@ -64,7 +64,8 @@ my $static_prereqs = do { my $x = {
                                       'Test::CPAN::Meta' => '0',
                                       'Test::More' => '0',
                                       'Test::Pod' => '1.41',
-                                      'Test::Pod::Coverage' => '1.08'
+                                      'Test::Pod::Coverage' => '1.08',
+                                      'Test::Spelling' => '0.12'
                                     }
                     },
        'runtime' => {

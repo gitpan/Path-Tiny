@@ -4,7 +4,7 @@ use warnings;
 
 package Path::Tiny;
 # ABSTRACT: File path utility
-our $VERSION = '0.054'; # VERSION
+our $VERSION = '0.055'; # VERSION
 
 # Dependencies
 use Config;
@@ -203,7 +203,7 @@ sub path {
         return $path;
     }
 
-    # stringify initial path
+    # stringify objects
     $path = "$path";
 
     # expand relative volume paths on windows; put trailing slash on UNC root
@@ -212,18 +212,17 @@ sub path {
         $path .= "/" if $path =~ m{^$UNC_VOL$};
     }
 
-    # concatenate more arguments (stringifies any objects, too)
+    # concatenations stringifies objects, too
     if (@_) {
         $path .= ( _is_root($path) ? "" : "/" ) . join( "/", @_ );
     }
 
-    # canonicalize paths
-    my $cpath = $path = File::Spec->canonpath($path); # ugh, but probably worth it
-    $path =~ tr[\\][/] if IS_WIN32();                 # unix convention enforced
-    $path .= "/" if IS_WIN32() && $path =~ m{^$UNC_VOL$}; # canonpath strips it
+    # canonicalize, but with unix slashes and put back trailing volume slash
+    my $cpath = $path = File::Spec->canonpath($path);
+    $path =~ tr[\\][/] if IS_WIN32();
+    $path .= "/" if IS_WIN32() && $path =~ m{^$UNC_VOL$};
 
-    # hack to make splitpath give us a basename; root paths must always have
-    # a trailing slash, but other paths must not
+    # root paths must always have a trailing slash, but other paths must not
     if ( _is_root($path) ) {
         $path =~ s{/?$}{/};
     }
@@ -237,7 +236,6 @@ sub path {
         $path =~ s{^(~[^/]*)}{$homedir};
     }
 
-    # and we're finally done
     bless [ $path, $cpath ], __PACKAGE__;
 }
 
@@ -318,7 +316,7 @@ sub rootdir { path( File::Spec->rootdir ) }
 #pod =cut
 
 sub tempfile {
-    shift if $_[0] eq 'Path::Tiny'; # called as method
+    shift if @_ && $_[0] eq 'Path::Tiny'; # called as method
     my ( $maybe_template, $args ) = _parse_file_temp_args(@_);
     # File::Temp->new demands TEMPLATE
     $args->{TEMPLATE} = $maybe_template->[0] if @$maybe_template;
@@ -332,7 +330,7 @@ sub tempfile {
 }
 
 sub tempdir {
-    shift if $_[0] eq 'Path::Tiny'; # called as method
+    shift if @_ && $_[0] eq 'Path::Tiny'; # called as method
     my ( $maybe_template, $args ) = _parse_file_temp_args(@_);
 
     # File::Temp->newdir demands leading template
@@ -1490,7 +1488,7 @@ Path::Tiny - File path utility
 
 =head1 VERSION
 
-version 0.054
+version 0.055
 
 =head1 SYNOPSIS
 
@@ -2285,6 +2283,10 @@ Chris Williams <bingos@cpan.org>
 =item *
 
 David Steinbrunner <dsteinbrunner@pobox.com>
+
+=item *
+
+Doug Bell <madcityzen@gmail.com>
 
 =item *
 
