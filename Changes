@@ -1,5 +1,21 @@
 Revision history for Path-Tiny
 
+0.056     2014-08-07 15:08:41-04:00 America/New_York
+
+    [*** DEPRECATIONS ***]
+
+    - The 'dirname' method is deprecated due to exposing File::Spec
+      inconsistencies
+
+    [ADDED]
+
+    - The 'digest' method now takes a 'chunk_size' option to avoid
+      slurping files entirely into memory.
+
+    [FIXED]
+
+    - Fixed problem throwing errors from 'remove'
+
 0.055     2014-06-30 10:29:28-04:00 America/New_York
 
     [FIXED]

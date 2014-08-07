@@ -2,7 +2,7 @@ NAME
     Path::Tiny - File path utility
 
 VERSION
-    version 0.055
+    version 0.056
 
 SYNOPSIS
       use Path::Tiny;
@@ -263,18 +263,28 @@ METHODS
   digest
         $obj = path("/tmp/foo.txt")->digest;        # SHA-256
         $obj = path("/tmp/foo.txt")->digest("MD5"); # user-selected
+        $obj = path("/tmp/foo.txt")->digest( { chunk_size => 1e6 }, "MD5" );
 
-    Returns a hexadecimal digest for a file. Any arguments are passed to the
-    constructor for Digest to select an algorithm. If no arguments are
-    given, the default is SHA-256.
+    Returns a hexadecimal digest for a file. An optional hash reference of
+    options may be given. The only option is "chunk_size". If "chunk_size"
+    is given, that many bytes will be read at a time. If not provided, the
+    entire file will be slurped into memory to compute the digest.
 
-  dirname
+    Any subsequent arguments are passed to the constructor for Digest to
+    select an algorithm. If no arguments are given, the default is SHA-256.
+
+  dirname (deprecated)
         $name = path("/tmp/foo.txt")->dirname; # "/tmp/"
 
-    Returns the directory name portion of the path. This is roughly
-    equivalent to what File::Spec would give from "splitpath" and thus
-    usually has the trailing slash. If that's not desired, stringify
-    directories or call "parent" on files.
+    Returns the directory portion you would get from calling
+    "File::Spec->splitpath( $path->stringify )" or "." for a path without a
+    parent directory portion. Because File::Spec is inconsistent, the result
+    might or might not have a trailing slash. Because of this, this method
+    is deprecated.
+
+    A better, more consistently approach is likely
+    "$path->parent->stringify", which will not have a trailing slash except
+    for a root directory.
 
   exists, is_file, is_dir
         if ( path("/tmp")->exists ) { ... }     # -e
@@ -465,8 +475,9 @@ METHODS
 
     Note: as of 0.012, remove only works on files.
 
-    This is just like "unlink", except if the path does not exist, it
-    returns false rather than throwing an exception.
+    This is just like "unlink", except for its error handling: if the path
+    does not exist, it returns false; if deleting the file fails, it throws
+    an exception.
 
   remove_tree
         # directory
@@ -725,6 +736,8 @@ CONTRIBUTORS
     *   Martin Kjeldsen <mk@bluepipe.dk>
 
     *   Michael G. Schwern <mschwern@cpan.org>
+
+    *   Smylers <Smylers@stripey.com>
 
     *   Toby Inkster <tobyink@cpan.org>
 

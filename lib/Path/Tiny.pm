@@ -4,7 +4,7 @@ use warnings;
 
 package Path::Tiny;
 # ABSTRACT: File path utility
-our $VERSION = '0.055'; # VERSION
+our $VERSION = '0.056'; # VERSION
 
 # Dependencies
 use Config;
@@ -325,7 +325,7 @@ sub tempfile {
     my $temp = File::Temp->new( TMPDIR => 1, %$args );
     close $temp;
     my $self = path($temp)->absolute;
-    $self->[TEMP] = $temp;          # keep object alive while we are
+    $self->[TEMP] = $temp;                # keep object alive while we are
     return $self;
 }
 
@@ -337,7 +337,7 @@ sub tempdir {
     require File::Temp;
     my $temp = File::Temp->newdir( @$maybe_template, TMPDIR => 1, %$args );
     my $self = path($temp)->absolute;
-    $self->[TEMP] = $temp;          # keep object alive while we are
+    $self->[TEMP] = $temp;                # keep object alive while we are
     return $self;
 }
 
@@ -604,28 +604,48 @@ sub copy {
 #pod
 #pod     $obj = path("/tmp/foo.txt")->digest;        # SHA-256
 #pod     $obj = path("/tmp/foo.txt")->digest("MD5"); # user-selected
+#pod     $obj = path("/tmp/foo.txt")->digest( { chunk_size => 1e6 }, "MD5" );
 #pod
-#pod Returns a hexadecimal digest for a file.  Any arguments are passed to the
-#pod constructor for L<Digest> to select an algorithm.  If no arguments are given,
-#pod the default is SHA-256.
+#pod Returns a hexadecimal digest for a file.  An optional hash reference of options may
+#pod be given.  The only option is C<chunk_size>.  If C<chunk_size> is given, that many
+#pod bytes will be read at a time.  If not provided, the entire file will be slurped
+#pod into memory to compute the digest.
+#pod
+#pod Any subsequent arguments are passed to the constructor for L<Digest> to select
+#pod an algorithm.  If no arguments are given, the default is SHA-256.
 #pod
 #pod =cut
 
 sub digest {
-    my ( $self, $alg, @args ) = @_;
-    $alg = 'SHA-256' unless defined $alg;
+    my ( $self, @opts ) = @_;
+    my $args = ( @opts && ref $opts[0] eq 'HASH' ) ? shift @opts : {};
+    $args = _get_args( $args, qw/chunk_size/ );
+    unshift @opts, 'SHA-256' unless @opts;
     require Digest;
-    return Digest->new( $alg, @args )->add( $self->slurp_raw )->hexdigest;
+    my $digest = Digest->new(@opts);
+    if ( $args->{chunk_size} ) {
+        my $fh = $self->filehandle( { locked => 1 }, "<", ":unix" );
+        my $buf;
+        $digest->add($buf) while read $fh, $buf, $args->{chunk_size};
+    }
+    else {
+        $digest->add( $self->slurp_raw );
+    }
+    return $digest->hexdigest;
 }
 
-#pod =method dirname
+#pod =method dirname (deprecated)
 #pod
 #pod     $name = path("/tmp/foo.txt")->dirname; # "/tmp/"
 #pod
-#pod Returns the directory name portion of the path.  This is roughly
-#pod equivalent to what L<File::Spec> would give from C<splitpath> and thus
-#pod usually has the trailing slash. If that's not desired, stringify directories
-#pod or call C<parent> on files.
+#pod Returns the directory portion you would get from calling
+#pod C<< File::Spec->splitpath( $path->stringify ) >> or C<"."> for a path without a
+#pod parent directory portion.  Because L<File::Spec> is inconsistent, the result
+#pod might or might not have a trailing slash.  Because of this, this method is
+#pod B<deprecated>.
+#pod
+#pod A better, more consistently approach is likely C<< $path->parent->stringify >>,
+#pod which will not have a trailing slash except for a root directory.
 #pod
 #pod =cut
 
@@ -1149,8 +1169,9 @@ sub relative { path( File::Spec->abs2rel( $_[0]->[PATH], $_[1] ) ) }
 #pod
 #pod B<Note: as of 0.012, remove only works on files>.
 #pod
-#pod This is just like C<unlink>, except if the path does not exist, it returns
-#pod false rather than throwing an exception.
+#pod This is just like C<unlink>, except for its error handling: if the path does
+#pod not exist, it returns false; if deleting the file fails, it throws an
+#pod exception.
 #pod
 #pod =cut
 
@@ -1159,7 +1180,7 @@ sub remove {
 
     return 0 if !-e $self->[PATH] && !-l $self->[PATH];
 
-    return unlink $self->[PATH] || $self->_throw('unlink');
+    return unlink( $self->[PATH] ) || $self->_throw('unlink');
 }
 
 #pod =method remove_tree
@@ -1488,7 +1509,7 @@ Path::Tiny - File path utility
 
 =head1 VERSION
 
-version 0.055
+version 0.056
 
 =head1 SYNOPSIS
 
@@ -1763,19 +1784,28 @@ Copies a file using L<File::Copy>'s C<copy> function.
 
     $obj = path("/tmp/foo.txt")->digest;        # SHA-256
     $obj = path("/tmp/foo.txt")->digest("MD5"); # user-selected
+    $obj = path("/tmp/foo.txt")->digest( { chunk_size => 1e6 }, "MD5" );
 
-Returns a hexadecimal digest for a file.  Any arguments are passed to the
-constructor for L<Digest> to select an algorithm.  If no arguments are given,
-the default is SHA-256.
+Returns a hexadecimal digest for a file.  An optional hash reference of options may
+be given.  The only option is C<chunk_size>.  If C<chunk_size> is given, that many
+bytes will be read at a time.  If not provided, the entire file will be slurped
+into memory to compute the digest.
 
-=head2 dirname
+Any subsequent arguments are passed to the constructor for L<Digest> to select
+an algorithm.  If no arguments are given, the default is SHA-256.
+
+=head2 dirname (deprecated)
 
     $name = path("/tmp/foo.txt")->dirname; # "/tmp/"
 
-Returns the directory name portion of the path.  This is roughly
-equivalent to what L<File::Spec> would give from C<splitpath> and thus
-usually has the trailing slash. If that's not desired, stringify directories
-or call C<parent> on files.
+Returns the directory portion you would get from calling
+C<< File::Spec->splitpath( $path->stringify ) >> or C<"."> for a path without a
+parent directory portion.  Because L<File::Spec> is inconsistent, the result
+might or might not have a trailing slash.  Because of this, this method is
+B<deprecated>.
+
+A better, more consistently approach is likely C<< $path->parent->stringify >>,
+which will not have a trailing slash except for a root directory.
 
 =head2 exists, is_file, is_dir
 
@@ -1980,8 +2010,9 @@ C<< File::Spec->abs2rel() >>.
 
 B<Note: as of 0.012, remove only works on files>.
 
-This is just like C<unlink>, except if the path does not exist, it returns
-false rather than throwing an exception.
+This is just like C<unlink>, except for its error handling: if the path does
+not exist, it returns false; if deleting the file fails, it throws an
+exception.
 
 =head2 remove_tree
 
@@ -2274,6 +2305,8 @@ David Golden <dagolden@cpan.org>
 
 =head1 CONTRIBUTORS
 
+=for stopwords Chris Williams David Steinbrunner Doug Bell Gabor Szabo Gabriel Andrade George Hartzell Geraud Continsouzas Goro Fuji Karen Etheridge Martin Kjeldsen Michael G. Schwern Smylers Toby Inkster 김도형 - Keedi Kim
+
 =over 4
 
 =item *
@@ -2319,6 +2352,10 @@ Martin Kjeldsen <mk@bluepipe.dk>
 =item *
 
 Michael G. Schwern <mschwern@cpan.org>
+
+=item *
+
+Smylers <Smylers@stripey.com>
 
 =item *
 
