@@ -2,7 +2,7 @@ NAME
     Path::Tiny - File path utility
 
 VERSION
-    version 0.056
+    version 0.057
 
 SYNOPSIS
       use Path::Tiny;
@@ -631,7 +631,8 @@ CAVEATS
    AIX and locking
     AIX requires a write handle for locking. Therefore, calls that normally
     open a read handle and take a shared lock instead will open a read-write
-    handle and take an exclusive lock.
+    handle and take an exclusive lock. If the user does not have write
+    permission, no lock will be used.
 
   utf8 vs UTF-8
     All the *_utf8 methods use ":encoding(UTF-8)" -- either as
@@ -717,6 +718,14 @@ AUTHOR
 CONTRIBUTORS
     *   Chris Williams <bingos@cpan.org>
 
+    *   Michael G. Schwern <mschwern@cpan.org>
+
+    *   Smylers <Smylers@stripey.com>
+
+    *   Toby Inkster <tobyink@cpan.org>
+
+    *   김도형 - Keedi Kim <keedi@cpan.org>
+
     *   David Steinbrunner <dsteinbrunner@pobox.com>
 
     *   Doug Bell <madcityzen@gmail.com>
@@ -734,14 +743,6 @@ CONTRIBUTORS
     *   Karen Etheridge <ether@cpan.org>
 
     *   Martin Kjeldsen <mk@bluepipe.dk>
-
-    *   Michael G. Schwern <mschwern@cpan.org>
-
-    *   Smylers <Smylers@stripey.com>
-
-    *   Toby Inkster <tobyink@cpan.org>
-
-    *   김도형 - Keedi Kim <keedi@cpan.org>
 
 COPYRIGHT AND LICENSE
     This software is Copyright (c) 2013 by David Golden.

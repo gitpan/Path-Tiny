@@ -4,7 +4,7 @@ use warnings;
 
 package Path::Tiny;
 # ABSTRACT: File path utility
-our $VERSION = '0.056'; # VERSION
+our $VERSION = '0.057'; # VERSION
 
 # Dependencies
 use Config;
@@ -746,9 +746,14 @@ sub filehandle {
             $trunc = 1;
         }
         elsif ( $^O eq 'aix' && $opentype eq "<" ) {
-            # AIX can only lock write handles, so upgrade to RW and LOCK_EX
-            $opentype = "+<";
-            $lock     = Fcntl::LOCK_EX();
+            # AIX can only lock write handles, so upgrade to RW and LOCK_EX if
+            # the file is writable; otherwise give up on locking.  N.B.
+            # checking -w before open to determine the open mode is an
+            # unavoidable race condition
+            if ( -w $self->[PATH] ) {
+                $opentype = "+<";
+                $lock     = Fcntl::LOCK_EX();
+            }
         }
         else {
             $lock = $opentype eq "<" ? Fcntl::LOCK_SH() : Fcntl::LOCK_EX();
@@ -1509,7 +1514,7 @@ Path::Tiny - File path utility
 
 =head1 VERSION
 
-version 0.056
+version 0.057
 
 =head1 SYNOPSIS
 
@@ -2192,7 +2197,8 @@ category:
 
 AIX requires a write handle for locking.  Therefore, calls that normally
 open a read handle and take a shared lock instead will open a read-write
-handle and take an exclusive lock.
+handle and take an exclusive lock.  If the user does not have write
+permission, no lock will be used.
 
 =head2 utf8 vs UTF-8
 
@@ -2305,13 +2311,29 @@ David Golden <dagolden@cpan.org>
 
 =head1 CONTRIBUTORS
 
-=for stopwords Chris Williams David Steinbrunner Doug Bell Gabor Szabo Gabriel Andrade George Hartzell Geraud Continsouzas Goro Fuji Karen Etheridge Martin Kjeldsen Michael G. Schwern Smylers Toby Inkster 김도형 - Keedi Kim
+=for stopwords Chris Williams Michael G. Schwern Smylers Toby Inkster 김도형 - Keedi Kim David Steinbrunner Doug Bell Gabor Szabo Gabriel Andrade George Hartzell Geraud Continsouzas Goro Fuji Karen Etheridge Martin Kjeldsen
 
 =over 4
 
 =item *
 
 Chris Williams <bingos@cpan.org>
+
+=item *
+
+Michael G. Schwern <mschwern@cpan.org>
+
+=item *
+
+Smylers <Smylers@stripey.com>
+
+=item *
+
+Toby Inkster <tobyink@cpan.org>
+
+=item *
+
+김도형 - Keedi Kim <keedi@cpan.org>
 
 =item *
 
@@ -2348,22 +2370,6 @@ Karen Etheridge <ether@cpan.org>
 =item *
 
 Martin Kjeldsen <mk@bluepipe.dk>
-
-=item *
-
-Michael G. Schwern <mschwern@cpan.org>
-
-=item *
-
-Smylers <Smylers@stripey.com>
-
-=item *
-
-Toby Inkster <tobyink@cpan.org>
-
-=item *
-
-김도형 - Keedi Kim <keedi@cpan.org>
 
 =back
 
