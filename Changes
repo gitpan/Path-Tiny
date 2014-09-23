@@ -1,5 +1,17 @@
 Revision history for Path-Tiny
 
+0.058     2014-09-23 11:00:24-04:00 America/New_York
+
+    [ADDED]
+
+    - Added a 'sibling' method as a more efficient form of
+      calling $path->parent->child(...).
+
+    [DOCUMENTED]
+
+    - Every method annotated with the version number of the
+      last API change.
+
 0.057     2014-09-19 11:23:05-04:00 America/New_York
 
     [FIXED]

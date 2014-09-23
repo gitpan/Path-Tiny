@@ -2,7 +2,7 @@ NAME
     Path::Tiny - File path utility
 
 VERSION
-    version 0.057
+    version 0.058
 
 SYNOPSIS
       use Path::Tiny;
@@ -104,11 +104,15 @@ CONSTRUCTORS
     This optimizes copies without proliferating references unexpectedly if a
     copy is made by code outside your control.
 
+    Current API available since 0.017.
+
   new
         $path = Path::Tiny->new("foo/bar");
 
     This is just like "path", but with method call overhead. (Why would you
     do that?)
+
+    Current API available since 0.001.
 
   cwd
         $path = Path::Tiny->cwd; # path( Cwd::getcwd )
@@ -120,6 +124,8 @@ CONSTRUCTORS
     "cwd" may be exported on request and used as a function instead of as a
     method.
 
+    Current API available since 0.018.
+
   rootdir
         $path = Path::Tiny->rootdir; # /
         $path = rootdir;             # optional export
@@ -129,6 +135,8 @@ CONSTRUCTORS
 
     "rootdir" may be exported on request and used as a function instead of
     as a method.
+
+    Current API available since 0.018.
 
   tempfile, tempdir
         $temp = Path::Tiny->tempfile( @options );
@@ -160,6 +168,8 @@ CONSTRUCTORS
     Both "tempfile" and "tempdir" may be exported on request and used as
     functions instead of as methods.
 
+    Current API available since 0.018.
+
 METHODS
   absolute
         $abs = path("foo/bar")->absolute;
@@ -177,6 +187,8 @@ METHODS
 
     On Windows, an absolute path without a volume component will have it
     added based on the current drive.
+
+    Current API available since 0.001.
 
   append, append_raw, append_utf8
         path("foo.txt")->append(@data);
@@ -197,6 +209,8 @@ METHODS
     ":unix:encoding(UTF-8)". If Unicode::UTF8 0.58+ is installed, a raw
     append will be done instead on the data encoded with "Unicode::UTF8".
 
+    Current API available since 0.004.
+
   basename
         $name = path("foo/bar.txt")->basename;        # bar.txt
         $name = path("foo.txt")->basename('.txt');    # foo
@@ -209,12 +223,16 @@ METHODS
     match at the end of the file portion or last directory portion will be
     removed before the result is returned.
 
+    Current API available since 0.054.
+
   canonpath
         $canonical = path("foo/bar")->canonpath; # foo\bar on Windows
 
     Returns a string with the canonical format of the path name for the
     platform. In particular, this means directory separators will be "\" on
     Windows.
+
+    Current API available since 0.001.
 
   child
         $file = path("/tmp")->child("foo.txt"); # "/tmp/foo.txt"
@@ -223,6 +241,8 @@ METHODS
     Returns a new "Path::Tiny" object relative to the original. Works like
     "catfile" or "catdir" from File::Spec, but without caring about file or
     directories.
+
+    Current API available since 0.001.
 
   children
         @paths = path("/tmp")->children;
@@ -237,6 +257,8 @@ METHODS
 
         @paths = path("/tmp")->children( qr/^foo/ );
         # matches children like the glob foo*
+
+    Current API available since 0.028.
 
   chmod
         path("foo.txt")->chmod(0777);
@@ -255,10 +277,14 @@ METHODS
     allowed and permissions "stugoX" are not supported. (See File::chmod for
     more complex needs.)
 
+    Current API available since 0.053.
+
   copy
         path("/tmp/foo.txt")->copy("/tmp/bar.txt");
 
     Copies a file using File::Copy's "copy" function.
+
+    Current API available since 0.001.
 
   digest
         $obj = path("/tmp/foo.txt")->digest;        # SHA-256
@@ -273,6 +299,8 @@ METHODS
     Any subsequent arguments are passed to the constructor for Digest to
     select an algorithm. If no arguments are given, the default is SHA-256.
 
+    Current API available since 0.056.
+
   dirname (deprecated)
         $name = path("/tmp/foo.txt")->dirname; # "/tmp/"
 
@@ -285,6 +313,8 @@ METHODS
     A better, more consistently approach is likely
     "$path->parent->stringify", which will not have a trailing slash except
     for a root directory.
+
+    Deprecated in 0.056.
 
   exists, is_file, is_dir
         if ( path("/tmp")->exists ) { ... }     # -e
@@ -299,6 +329,8 @@ METHODS
     can be read just like files.
 
     Use "-f" instead if you really mean to check for a plain file.
+
+    Current API available since 0.053.
 
   filehandle
         $fh = path("/tmp/foo.txt")->filehandle($mode, $binmode);
@@ -316,11 +348,15 @@ METHODS
 
     See "openr", "openw", "openrw", and "opena" for sugar.
 
+    Current API available since 0.039.
+
   is_absolute, is_relative
         if ( path("/tmp")->is_absolute ) { ... }
         if ( path("/tmp")->is_relative ) { ... }
 
     Booleans for whether the path appears absolute or relative.
+
+    Current API available since 0.001.
 
   is_rootdir
         while ( ! $path->is_rootdir ) {
@@ -335,6 +371,8 @@ METHODS
 
         path("C:/")->is_rootdir;             # true
         path("//server/share/")->is_rootdir; #true
+
+    Current API available since 0.038.
 
   iterator
         $iter = path("/tmp")->iterator( \%options );
@@ -366,6 +404,8 @@ METHODS
     For a more powerful, recursive iterator with built-in loop avoidance,
     see Path::Iterator::Rule.
 
+    Current API available since 0.016.
+
   lines, lines_raw, lines_utf8
         @contents = path("/tmp/foo.txt")->lines;
         @contents = path("/tmp/foo.txt")->lines(\%options);
@@ -395,6 +435,8 @@ METHODS
     ":encoding(UTF-8)", though a bit memory intensive. If memory use is a
     concern, consider "openr_utf8" and iterating directly on the handle.
 
+    Current API available since 0.048.
+
   mkpath
         path("foo/bar/baz")->mkpath;
         path("foo/bar/baz")->mkpath( \%options );
@@ -404,10 +446,14 @@ METHODS
     thrown. Returns the list of directories created or an empty list if the
     directories already exist, just like "make_path".
 
+    Current API available since 0.001.
+
   move
         path("foo.txt")->move("bar.txt");
 
     Just like "rename".
+
+    Current API available since 0.001.
 
   openr, openw, openrw, opena
         $fh = path("foo.txt")->openr($binmode);  # read
@@ -440,6 +486,8 @@ METHODS
 
     See "filehandle" for more on locking.
 
+    Current API available since 0.011.
+
   parent
         $parent = path("foo/bar/baz")->parent; # foo/bar
         $parent = path("foo/wibble.txt")->parent; # foo
@@ -450,6 +498,8 @@ METHODS
     the original directory or file. An optional positive integer argument is
     the number of parent directories upwards to return. "parent" by itself
     is equivalent to parent(1).
+
+    Current API available since 0.014.
 
   realpath
         $real = path("/baz/foo/../bar")->realpath;
@@ -464,20 +514,24 @@ METHODS
 
         $real = path("doesnt_exist/foo")->realpath; # dies
 
+    Current API available since 0.001.
+
   relative
         $rel = path("/tmp/foo/bar")->relative("/tmp"); # foo/bar
 
     Returns a "Path::Tiny" object with a relative path name. Given the
     trickiness of this, it's a thin wrapper around "File::Spec->abs2rel()".
 
+    Current API available since 0.001.
+
   remove
         path("foo.txt")->remove;
-
-    Note: as of 0.012, remove only works on files.
 
     This is just like "unlink", except for its error handling: if the path
     does not exist, it returns false; if deleting the file fails, it throws
     an exception.
+
+    Current API available since 0.012.
 
   remove_tree
         # directory
@@ -494,6 +548,19 @@ METHODS
     "rmdir" function instead.
 
         rmdir path("foo/bar/baz/");
+
+    Current API available since 0.013.
+
+  sibling
+        $foo = path("/tmp/foo.txt");
+        $sib = $foo->sibling("bar.txt");        # /tmp/bar.txt
+        $sib = $foo->sibling("baz", "bam.txt"); # /tmp/baz/bam.txt
+
+    Returns a new "Path::Tiny" object relative to the parent of the
+    original. This is slightly more efficient than
+    "$path->parent->child(...)".
+
+    Current API available since 0.058.
 
   slurp, slurp_raw, slurp_utf8
         $data = path("foo.txt")->slurp;
@@ -513,6 +580,8 @@ METHODS
     slurp will be done instead and the result decoded with "Unicode::UTF8".
     This is just as strict and is roughly an order of magnitude faster than
     using ":encoding(UTF-8)".
+
+    Current API available since 0.004.
 
   spew, spew_raw, spew_utf8
         path("foo.txt")->spew(@data);
@@ -534,11 +603,15 @@ METHODS
     If Unicode::UTF8 0.58+ is installed, a raw spew will be done instead on
     the data encoded with "Unicode::UTF8".
 
+    Current API available since 0.011.
+
   stat, lstat
         $stat = path("foo.txt")->stat;
         $stat = path("/some/symlink")->lstat;
 
     Like calling "stat" or "lstat" from File::stat.
+
+    Current API available since 0.001.
 
   stringify
         $path = path("foo.txt");
@@ -547,6 +620,8 @@ METHODS
     Returns a string representation of the path. Unlike "canonpath", this
     method returns the path standardized with Unix-style "/" directory
     separators.
+
+    Current API available since 0.001.
 
   subsumes
         path("foo/bar")->subsumes("foo/bar/baz"); # true
@@ -566,6 +641,8 @@ METHODS
         my $p2 = path("foo/bar/../baz")->realpath;
         if ( $p1->subsumes($p2) ) { ... }
 
+    Current API available since 0.048.
+
   touch
         path("foo.txt")->touch;
         path("foo.txt")->touch($epoch_secs);
@@ -578,12 +655,16 @@ METHODS
 
         path("foo.txt")->touch->spew( $content );
 
+    Current API available since 0.015.
+
   touchpath
         path("bar/baz/foo.txt")->touchpath;
 
     Combines "mkpath" and "touch". Creates the parent directory if it
     doesn't exist, before touching the file. Returns the path object like
     "touch" does.
+
+    Current API available since 0.022.
 
   volume
         $vol = path("/tmp/foo.txt")->volume;   # ""
@@ -593,6 +674,8 @@ METHODS
     what File::Spec would give from "splitpath" and thus usually is the
     empty string on Unix-like operating systems or the drive letter for an
     absolute path on "MSWin32".
+
+    Current API available since 0.001.
 
 EXCEPTION HANDLING
     Simple usage errors will generally croak. Failures of underlying Perl
