@@ -15,7 +15,7 @@ build_requires:
 configure_requires:
   ExtUtils::MakeMaker: '6.17'
 dynamic_config: 0
-generated_by: 'Dist::Zilla version 5.020, CPAN::Meta::Converter version 2.140640'
+generated_by: 'Dist::Zilla version 5.020, CPAN::Meta::Converter version 2.142690'
 license: apache
 meta-spec:
   url: http://module-build.sourceforge.net/META-spec-v1.4.html
@@ -33,10 +33,10 @@ no_index:
 provides:
   Path::Tiny:
     file: lib/Path/Tiny.pm
-    version: '0.058'
+    version: '0.059'
   Path::Tiny::Error:
     file: lib/Path/Tiny.pm
-    version: '0.058'
+    version: '0.059'
 recommends:
   Unicode::UTF8: '0.58'
 requires:
@@ -61,7 +61,7 @@ resources:
   bugtracker: https://github.com/dagolden/Path-Tiny/issues
   homepage: https://github.com/dagolden/Path-Tiny
   repository: https://github.com/dagolden/Path-Tiny.git
-version: '0.058'
+version: '0.059'
 x_authority: cpan:DAGOLDEN
 x_contributors:
   - 'Chris Williams <bingos@cpan.org>'
@@ -72,6 +72,7 @@ x_contributors:
   - 'George Hartzell <hartzell@cpan.org>'
   - 'Geraud Continsouzas <geraud@scsi.nc>'
   - 'Goro Fuji <gfuji@cpan.org>'
+  - 'Graham Knop <haarg@haarg.org>'
   - 'Karen Etheridge <ether@cpan.org>'
   - 'Martin Kjeldsen <mk@bluepipe.dk>'
   - 'Michael G. Schwern <mschwern@cpan.org>'

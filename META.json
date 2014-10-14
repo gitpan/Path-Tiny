@@ -4,7 +4,7 @@
       "David Golden <dagolden@cpan.org>"
    ],
    "dynamic_config" : 0,
-   "generated_by" : "Dist::Zilla version 5.020, CPAN::Meta::Converter version 2.140640",
+   "generated_by" : "Dist::Zilla version 5.020, CPAN::Meta::Converter version 2.142690",
    "license" : [
       "apache_2_0"
    ],
@@ -38,7 +38,7 @@
             "Dist::Zilla::Plugin::OnlyCorePrereqs" : "0",
             "Dist::Zilla::Plugin::Prereqs" : "0",
             "Dist::Zilla::Plugin::RemovePrereqs" : "0",
-            "Dist::Zilla::PluginBundle::DAGOLDEN" : "0.068",
+            "Dist::Zilla::PluginBundle::DAGOLDEN" : "0.072",
             "File::Spec" : "0",
             "File::Temp" : "0",
             "IO::Handle" : "0",
@@ -96,11 +96,11 @@
    "provides" : {
       "Path::Tiny" : {
          "file" : "lib/Path/Tiny.pm",
-         "version" : "0.058"
+         "version" : "0.059"
       },
       "Path::Tiny::Error" : {
          "file" : "lib/Path/Tiny.pm",
-         "version" : "0.058"
+         "version" : "0.059"
       }
    },
    "release_status" : "stable",
@@ -115,7 +115,7 @@
          "web" : "https://github.com/dagolden/Path-Tiny"
       }
    },
-   "version" : "0.058",
+   "version" : "0.059",
    "x_authority" : "cpan:DAGOLDEN",
    "x_contributors" : [
       "Chris Williams <bingos@cpan.org>",
@@ -126,6 +126,7 @@
       "George Hartzell <hartzell@cpan.org>",
       "Geraud Continsouzas <geraud@scsi.nc>",
       "Goro Fuji <gfuji@cpan.org>",
+      "Graham Knop <haarg@haarg.org>",
       "Karen Etheridge <ether@cpan.org>",
       "Martin Kjeldsen <mk@bluepipe.dk>",
       "Michael G. Schwern <mschwern@cpan.org>",

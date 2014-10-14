@@ -2,7 +2,7 @@ NAME
     Path::Tiny - File path utility
 
 VERSION
-    version 0.058
+    version 0.059
 
 SYNOPSIS
       use Path::Tiny;
@@ -801,14 +801,6 @@ AUTHOR
 CONTRIBUTORS
     *   Chris Williams <bingos@cpan.org>
 
-    *   Michael G. Schwern <mschwern@cpan.org>
-
-    *   Smylers <Smylers@stripey.com>
-
-    *   Toby Inkster <tobyink@cpan.org>
-
-    *   김도형 - Keedi Kim <keedi@cpan.org>
-
     *   David Steinbrunner <dsteinbrunner@pobox.com>
 
     *   Doug Bell <madcityzen@gmail.com>
@@ -823,12 +815,22 @@ CONTRIBUTORS
 
     *   Goro Fuji <gfuji@cpan.org>
 
+    *   Graham Knop <haarg@haarg.org>
+
     *   Karen Etheridge <ether@cpan.org>
 
     *   Martin Kjeldsen <mk@bluepipe.dk>
 
+    *   Michael G. Schwern <mschwern@cpan.org>
+
+    *   Smylers <Smylers@stripey.com>
+
+    *   Toby Inkster <tobyink@cpan.org>
+
+    *   김도형 - Keedi Kim <keedi@cpan.org>
+
 COPYRIGHT AND LICENSE
-    This software is Copyright (c) 2013 by David Golden.
+    This software is Copyright (c) 2014 by David Golden.
 
     This is free software, licensed under:
 

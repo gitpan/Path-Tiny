@@ -59,6 +59,9 @@ geraud
 Goro
 Fuji
 gfuji
+Graham
+Knop
+haarg
 Karen
 Etheridge
 ether

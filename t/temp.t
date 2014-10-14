@@ -62,7 +62,7 @@ done_testing;
 #
 # This file is part of Path-Tiny
 #
-# This software is Copyright (c) 2013 by David Golden.
+# This software is Copyright (c) 2014 by David Golden.
 #
 # This is free software, licensed under:
 #

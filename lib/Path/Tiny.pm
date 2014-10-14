@@ -4,7 +4,8 @@ use warnings;
 
 package Path::Tiny;
 # ABSTRACT: File path utility
-our $VERSION = '0.058'; # VERSION
+
+our $VERSION = '0.059';
 
 # Dependencies
 use Config;
@@ -40,7 +41,7 @@ sub THAW   { return path( $_[2] ) }
 my $HAS_UU; # has Unicode::UTF8; lazily populated
 
 sub _check_UU {
-    eval { require Unicode::UTF8; Unicode::UTF8->VERSION(0.58); 1 };
+    !!eval { require Unicode::UTF8; Unicode::UTF8->VERSION(0.58); 1 };
 }
 
 my $HAS_FLOCK = $Config{d_flock} || $Config{d_fcntl_can_lock} || $Config{d_lockf};
@@ -459,7 +460,7 @@ sub append {
 sub append_raw { splice @_, 1, 0, { binmode => ":unix" }; goto &append }
 
 sub append_utf8 {
-    if ( defined($HAS_UU) ? $HAS_UU : $HAS_UU = _check_UU() ) {
+    if ( defined($HAS_UU) ? $HAS_UU : ( $HAS_UU = _check_UU() ) ) {
         my $self = shift;
         append( $self, { binmode => ":unix" }, map { Unicode::UTF8::encode_utf8($_) } @_ );
     }
@@ -998,7 +999,7 @@ sub lines_raw {
 sub lines_utf8 {
     my $self = shift;
     my $args = _get_args( shift, qw/binmode chomp count/ );
-    if (   ( defined($HAS_UU) ? $HAS_UU : $HAS_UU = _check_UU() )
+    if (   ( defined($HAS_UU) ? $HAS_UU : ( $HAS_UU = _check_UU() ) )
         && $args->{chomp}
         && !$args->{count} )
     {
@@ -1343,7 +1344,7 @@ sub slurp {
 sub slurp_raw { $_[1] = { binmode => ":unix" }; goto &slurp }
 
 sub slurp_utf8 {
-    if ( defined($HAS_UU) ? $HAS_UU : $HAS_UU = _check_UU() ) {
+    if ( defined($HAS_UU) ? $HAS_UU : ( $HAS_UU = _check_UU() ) ) {
         return Unicode::UTF8::decode_utf8( slurp( $_[0], { binmode => ":unix" } ) );
     }
     else {
@@ -1399,7 +1400,7 @@ sub spew {
 sub spew_raw { splice @_, 1, 0, { binmode => ":unix" }; goto &spew }
 
 sub spew_utf8 {
-    if ( defined($HAS_UU) ? $HAS_UU : $HAS_UU = _check_UU() ) {
+    if ( defined($HAS_UU) ? $HAS_UU : ( $HAS_UU = _check_UU() ) ) {
         my $self = shift;
         spew( $self, { binmode => ":unix" }, map { Unicode::UTF8::encode_utf8($_) } @_ );
     }
@@ -1603,7 +1604,7 @@ Path::Tiny - File path utility
 
 =head1 VERSION
 
-version 0.058
+version 0.059
 
 =head1 SYNOPSIS
 
@@ -2483,29 +2484,13 @@ David Golden <dagolden@cpan.org>
 
 =head1 CONTRIBUTORS
 
-=for stopwords Chris Williams Michael G. Schwern Smylers Toby Inkster 김도형 - Keedi Kim David Steinbrunner Doug Bell Gabor Szabo Gabriel Andrade George Hartzell Geraud Continsouzas Goro Fuji Karen Etheridge Martin Kjeldsen
+=for stopwords Chris Williams David Steinbrunner Doug Bell Gabor Szabo Gabriel Andrade George Hartzell Geraud Continsouzas Goro Fuji Graham Knop Karen Etheridge Martin Kjeldsen Michael G. Schwern Smylers Toby Inkster 김도형 - Keedi Kim
 
 =over 4
 
 =item *
 
 Chris Williams <bingos@cpan.org>
-
-=item *
-
-Michael G. Schwern <mschwern@cpan.org>
-
-=item *
-
-Smylers <Smylers@stripey.com>
-
-=item *
-
-Toby Inkster <tobyink@cpan.org>
-
-=item *
-
-김도형 - Keedi Kim <keedi@cpan.org>
 
 =item *
 
@@ -2537,17 +2522,37 @@ Goro Fuji <gfuji@cpan.org>
 
 =item *
 
+Graham Knop <haarg@haarg.org>
+
+=item *
+
 Karen Etheridge <ether@cpan.org>
 
 =item *
 
 Martin Kjeldsen <mk@bluepipe.dk>
 
+=item *
+
+Michael G. Schwern <mschwern@cpan.org>
+
+=item *
+
+Smylers <Smylers@stripey.com>
+
+=item *
+
+Toby Inkster <tobyink@cpan.org>
+
+=item *
+
+김도형 - Keedi Kim <keedi@cpan.org>
+
 =back
 
 =head1 COPYRIGHT AND LICENSE
 
-This software is Copyright (c) 2013 by David Golden.
+This software is Copyright (c) 2014 by David Golden.
 
 This is free software, licensed under:
 
