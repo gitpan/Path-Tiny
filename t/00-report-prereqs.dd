@@ -1,7 +1,8 @@
 do { my $x = {
        'configure' => {
                         'requires' => {
-                                        'ExtUtils::MakeMaker' => '6.17'
+                                        'ExtUtils::MakeMaker' => '6.17',
+                                        'perl' => '5.008001'
                                       }
                       },
        'develop' => {
@@ -62,7 +63,8 @@ do { my $x = {
                                    'File::Temp' => '0.19',
                                    'Test::More' => '0.96',
                                    'lib' => '0',
-                                   'open' => '0'
+                                   'open' => '0',
+                                   'perl' => '5.008001'
                                  }
                  }
      };

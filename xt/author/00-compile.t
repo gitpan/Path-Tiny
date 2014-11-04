@@ -2,7 +2,7 @@ use 5.006;
 use strict;
 use warnings;
 
-# this test was generated with Dist::Zilla::Plugin::Test::Compile 2.049
+# this test was generated with Dist::Zilla::Plugin::Test::Compile 2.051
 
 use Test::More;
 

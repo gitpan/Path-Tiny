@@ -2,7 +2,7 @@ NAME
     Path::Tiny - File path utility
 
 VERSION
-    version 0.059
+    version 0.060
 
 SYNOPSIS
       use Path::Tiny;
@@ -198,9 +198,16 @@ METHODS
         path("foo.txt")->append_utf8(@data);
 
     Appends data to a file. The file is locked with "flock" prior to
-    writing. An optional hash reference may be used to pass options. The
-    only option is "binmode", which is passed to "binmode()" on the handle
-    used for writing.
+    writing. An optional hash reference may be used to pass options. Valid
+    options are:
+
+    *   "binmode": passed to "binmode()" on the handle used for writing.
+
+    *   "truncate": truncates the file after locking and before appending
+
+    The "truncate" option is a way to replace the contents of a file in
+    place, unlike "spew" which writes to a temporary file and then replaces
+    the original (if it exists).
 
     "append_raw" is like "append" with a "binmode" of ":unix" for fast,
     unbuffered, raw write.
@@ -209,7 +216,7 @@ METHODS
     ":unix:encoding(UTF-8)". If Unicode::UTF8 0.58+ is installed, a raw
     append will be done instead on the data encoded with "Unicode::UTF8".
 
-    Current API available since 0.004.
+    Current API available since 0.060.
 
   basename
         $name = path("foo/bar.txt")->basename;        # bar.txt
@@ -602,6 +609,13 @@ METHODS
     "spew_utf8" is like "spew" with a "binmode" of ":unix:encoding(UTF-8)".
     If Unicode::UTF8 0.58+ is installed, a raw spew will be done instead on
     the data encoded with "Unicode::UTF8".
+
+    NOTE: because the file is written to a temporary file and then renamed,
+    the new file will wind up with permissions based on your current umask.
+    This is a feature to protect you from a race condition that would
+    otherwise give different permissions than you might expect. If you
+    really want to keep the original mode flags, use "append" with the
+    "truncate" option.
 
     Current API available since 0.011.
 

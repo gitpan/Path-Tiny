@@ -27,6 +27,7 @@ on 'test' => sub {
   requires "Test::More" => "0.96";
   requires "lib" => "0";
   requires "open" => "0";
+  requires "perl" => "5.008001";
 };
 
 on 'test' => sub {
@@ -36,6 +37,7 @@ on 'test' => sub {
 
 on 'configure' => sub {
   requires "ExtUtils::MakeMaker" => "6.17";
+  requires "perl" => "5.008001";
 };
 
 on 'develop' => sub {
